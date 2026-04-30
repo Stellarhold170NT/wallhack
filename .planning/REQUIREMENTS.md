@@ -30,11 +30,11 @@
 
 ### Activity Recognition
 
-- [ ] **ACT-01**: Collect labeled dataset for 4 classes: empty, static, walking, waving. Target: ≥200 samples/class (~15 min recording per class)
+- [ ] **ACT-01**: Collect labeled dataset for 7 classes: walking, running, sitting down, standing up, lying down, bending, falling. Target: ≥200 samples/class (~15 min recording per class). Note: transitions (sit/stand/lying) may need shorter 2s windows.
 - [ ] **ACT-02**: Implement Attention-GRU model per Kang et al. 2025 source code: `nn.GRU` (128 hidden) + additive attention (32 hidden) + FC. ~82K params. Skip pruning for v1.
 - [ ] **ACT-03**: Data augmentation pipeline: temporal shifting (`np.roll` ±10 steps, 20× expansion), MixUp (30% probability, α=1.0), multiplicative Gaussian noise (3× copies)
 - [ ] **ACT-04**: Input preprocessing: amplitude extraction → `(samples, time_steps, 52)` → per-channel StandardScaler. No phase unwrap/Hampel needed for HAR.
-- [ ] **ACT-05**: Real-time inference window: 4 seconds sliding with 50% overlap; target accuracy ≥90% on held-out test
+- [ ] **ACT-05**: Real-time inference window: 4 seconds sliding with 50% overlap (2s adaptive for transitions); target accuracy ≥85% on held-out test with ESP32-S3 CSI. Architecture supports up to 276 classes (Sign-Fi proven) for multi-node expansion.
 - [ ] **ACT-06**: Classification output streamed to dashboard with confidence score
 
 ### Dashboard & API
@@ -59,7 +59,7 @@ Deferred to future release. Tracked but not in current roadmap.
 
 ### Enhanced Activity Recognition
 
-- **ACT-10**: Expand to 6+ classes (falling, running, sitting, standing)
+- **ACT-10**: Expand to 8+ classes (crawling, clapping, boxing, cleaning) — model architecture supports 276 classes
 - **ACT-11**: Cross-domain generalization (train LOS, test NLOS)
 
 ### Multi-Node Features
@@ -119,6 +119,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 - v1 requirements: 27 total
 - Mapped to phases: 27
 - Unmapped: 0 ✓
+
+**Note:** ACT-01 expanded from 4→7 classes. Architecture supports 8-276 classes (Sign-Fi proven at 99.32%).
+
+---
+*Last updated: 2026-04-30 after scope expansion (4→6 classes)*
 
 ---
 *Requirements defined: 2026-04-30*

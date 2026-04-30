@@ -6,7 +6,7 @@ A practical WiFi CSI sensing system built on ESP32-S3 that detects human presenc
 
 ## Core Value
 
-Reliable presence detection and simple activity classification (empty / static / walking / waving) using 2 ESP32-S3 nodes and a laptop aggregator — shipped and working within 6 weeks.
+Reliable presence detection and activity classification (7 classes: walking / running / sitting down / standing up / lying down / bending / falling) using 2 ESP32-S3 nodes and a laptop aggregator — architecture designed for multi-node scalability.
 
 ## Requirements
 
@@ -18,7 +18,7 @@ Reliable presence detection and simple activity classification (empty / static /
 
 - [ ] CSI realtime streaming from 2 ESP32-S3 nodes via UDP
 - [ ] Presence and intrusion detection with low false-positive rate
-- [ ] Activity recognition for 4 basic classes (empty, static, walking, waving)
+- [ ] Activity recognition for 7 classes (walking, running, sitting down, standing up, lying down, bending, falling) — architecture supports 8-276 classes for future multi-node expansion
 - [ ] Real-time web dashboard showing CSI heatmap + alerts
 - [ ] Signal processing pipeline (phase sanitize, Hampel filter, spectrogram)
 
@@ -48,16 +48,16 @@ Reliable presence detection and simple activity classification (empty / static /
 - **Hardware**: Only 2 ESP32-S3 nodes. No Intel 5300 / Atheros NICs. No Cognitum Seed.
 - **Accuracy ceiling**: ESP32-S3 consumer-grade CSI is noisier than research NICs. We accept "good enough" for presence/motion, not medical/clinical precision.
 - **Time**: 6 weeks target for v1.
-- **ML data**: No custom dataset yet. Kang et al. 2025 source code (analyzed) proves the model is only **78 lines** and uses raw amplitude + StandardScaler — no complex DSP needed for HAR. Data collection (4 classes × 200 samples) is the only remaining bottleneck.
+- **ML data**: No custom dataset yet. Kang et al. 2025 source code (analyzed) proves the model is only **78 lines** and uses raw amplitude + StandardScaler — no complex DSP needed for HAR. Model achieves 99.33% on 6-class StanFi dataset. Data collection (6 classes × 200 samples) is the only remaining bottleneck.
 - **Compute**: Inference on laptop (< 1ms CPU). On-device inference (ESP32-S3, 520KB SRAM) theoretically possible (328KB model) but deferred to v2.
-- **Activity Recognition risk**: **Very Low** — codebase exists, 52-subcarrier match, 4-class HAR already tested (HAR-1 dataset in repo).
+- **Activity Recognition risk**: **Low** — codebase exists, 52-subcarrier match, 7-class daily activities + transitions (StanFi/HAR style) feasible. Model supports 8-276 classes natively for multi-node expansion.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Python backend (not Rust) | Faster iteration, rich DSP/ML libraries, team familiarity | — Pending |
-| GRU+Attention model (not ResNet18/SVM) | Kang et al. 2025 source code analyzed: 78-line model, 82K params, raw amplitude + StandardScaler input. 52 subcarriers match ESP32-S3 exactly. 4-class HAR proven (HAR-1 dataset). Replaces Wallhack1.8k's ResNet18. | — Pending |
+| GRU+Attention model (not ResNet18/SVM) | Kang et al. 2025 source code analyzed: 78-line model, 82K params, raw amplitude + StandardScaler input. 52 subcarriers match ESP32-S3 exactly. 7-class daily activities + transitions (StanFi/HAR). Model supports 8-276 classes natively. Replaces Wallhack1.8k's ResNet18. | — Pending |
 | 2-node feature-level fusion (not signal-level) | Clock drift (~20-50 ppm) makes cross-node phase alignment impossible. Fuse decisions/features, not raw I/Q (ADR-012). | — Pending |
 | Skip heart rate & people counting | ADR-012 and ADR-021 explicitly mark these as unreliable on ESP32-S3. Avoid wasted effort. | — Pending |
 
@@ -79,4 +79,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-30 after project initialization*
+*Last updated: 2026-04-30 after scope expansion (4→6 classes)*

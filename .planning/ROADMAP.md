@@ -124,15 +124,15 @@
 
 ### Phase 5: Activity Recognition
 
-**Goal:** Train and deploy a 4-class activity classifier using proven Attention-GRU architecture.
+**Goal:** Train and deploy a 7-class activity classifier using proven Attention-GRU architecture. Architecture designed for multi-node scalability (supports 8-276 classes).
 
 **Requirements:** ACT-01, ACT-02, ACT-03, ACT-04, ACT-05
 
 **Success Criteria:**
-1. Dataset contains ≥200 samples per class (empty, static, walking, waving) collected in target environment
+1. Dataset contains ≥200 samples per class (walking, running, sitting down, standing up, lying down, bending, falling) collected in target environment. Transitions use 2s windows.
 2. Attention-GRU model adapted from Kang et al. 2025 source (`nn.GRU` 128 hidden + attention 32 hidden, ~82K params) trains successfully
 3. Data augmentation implemented: `np.roll` shifting (±10 steps, 20×), MixUp (30% prob, α=1.0), multiplicative Gaussian noise (3×)
-4. Model achieves ≥90% accuracy on held-out test set (5-fold cross-validation). Target: ~95% based on paper results.
+4. Model achieves ≥85% accuracy on held-out test set (5-fold cross-validation) with ESP32-S3 CSI. Architecture proven at 99.33% (StanFi 6-class) and 100% (Nexmon HAR 8-class) on research NICs.
 5. Inference latency <10 ms per sample on laptop CPU (< 1M FLOPs)
 
 **Phase boundary:**
@@ -148,7 +148,7 @@
 
 **Adaptation notes:**
 - Replace `CustomGRU` (slow hand-written loop) with `nn.GRU` (10× speedup, cuDNN optimized)
-- Skip pruning code — unnecessary for our scale
+- Skip pruning code — unnecessary for our scale (v1). Architecture supports 8-276 classes natively for multi-node expansion.
 - Write `esp32_dataset.py` loader converting our CSI `.npy`/`.csv` to `(samples, time, 52)` format
 - Add validation split + early stopping (missing from original code)
 
