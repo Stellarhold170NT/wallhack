@@ -2,7 +2,7 @@
 
 **Project:** ESP32-S3 CSI Wallhack
 **Milestone:** v1.0 — Basic Sensing Pipeline
-**Current Phase:** Phase 2 Planned — Ready to execute
+**Current Phase:** Phase 2 Complete — Ready for Phase 3
 **Last Updated:** 2026-04-30
 
 ## Project Reference
@@ -17,7 +17,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-30)
 | Phase | Status | Requirements | Success Criteria |
 |-------|--------|--------------|------------------|
 | 1: Firmware & Flashing | ✓ Complete | HW-01..HW-04 | 4/4 |
-| 2: UDP Aggregator | ✓ Planned | SIG-01..SIG-02 | 0/2 |
+| 2: UDP Aggregator | ✓ Complete | SIG-01..SIG-02 | 2/2 |
 | 3: Signal Processing | 🔴 Not started | SIG-03..SIG-06 | 0/4 |
 | 4: Presence & Intrusion | 🔴 Not started | SEC-01..SEC-04 | 0/4 |
 | 5: Activity Recognition | 🔴 Not started | ACT-01..ACT-05 | 0/5 |
@@ -68,8 +68,23 @@ None at project start.
   - D-07: Drop Oldest (ring buffer) per node, default 500 frames
   - D-08: Raw data persisted as `.npy` for Phase 5 dataset collection
   - D-09: Strict frame validation with graceful degradation
+  - D-10: Dynamic node discovery — min 1 node, auto-expand
 - Artifact: `.planning/phases/02-udp-aggregator/02-CONTEXT.md`
-- Next step: `/gsd-plan-phase 2`
+
+**2026-04-30 — Phase 2 Execution Complete**
+- Executed 3 waves (02-01 frame/parser, 02-02 server/buffer, 02-03 CLI/persistence)
+- Files created: 11 Python files + requirements.txt
+- Tests: 35/35 passed (17 parser + 13 server + 5 integration)
+- Key artifacts:
+  - `aggregator/frame.py` — CSIFrame dataclass
+  - `aggregator/parser.py` — ADR-018 binary parser (D-09)
+  - `aggregator/buffer.py` — NodeBuffer drop-oldest ring buffer (D-07)
+  - `aggregator/server.py` — CsiUdpServer with dynamic discovery (D-10)
+  - `aggregator/persistence.py` — NpyWriter for Phase 5 dataset (D-08)
+  - `aggregator/main.py` — CLI entry point
+  - `requirements.txt` — numpy, pytest, pytest-asyncio
+- Commit: `docs(02): gather phase 2 context` + execution commits
+- Ready for Phase 3: Signal Processing
 
 ---
 *State initialized: 2026-04-30*
