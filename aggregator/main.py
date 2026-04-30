@@ -34,9 +34,12 @@ async def run_server(args: argparse.Namespace) -> None:
     shutdown_event = asyncio.Event()
 
     async def consumer() -> None:
-        while True:
-            frame = await queue.get()
-            writer.write(frame)
+        try:
+            while True:
+                frame = await queue.get()
+                writer.write(frame)
+        except asyncio.CancelledError:
+            pass
 
     async def shutdown() -> None:
         if shutdown_event.is_set():
@@ -56,27 +59,25 @@ async def run_server(args: argparse.Namespace) -> None:
     loop = asyncio.get_running_loop()
 
     def _sigint_handler() -> None:
-        asyncio.ensure_future(shutdown())
+        asyncio.create_task(shutdown())
 
     try:
         loop.add_signal_handler(signal.SIGINT, _sigint_handler)
     except NotImplementedError:
-
-        loop.call_soon(lambda: None)
+        pass
 
     try:
         loop.add_signal_handler(signal.SIGTERM, _sigint_handler)
     except NotImplementedError:
+        pass
 
-        loop.call_soon(lambda: None)
-
-    await server.start()
-    consumer_task = asyncio.create_task(consumer())
-    logger.info("Aggregator running on UDP port %d", args.port)
-
-    await shutdown_event.wait()
-
-    logger.info("Aggregator stopped.")
+    try:
+        await server.start()
+        consumer_task = asyncio.create_task(consumer())
+        logger.info("Aggregator running on UDP port %d", args.port)
+        await shutdown_event.wait()
+    finally:
+        await shutdown()
 
 
 def main() -> None:
@@ -118,10 +119,7 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    try:
-        asyncio.run(run_server(args))
-    except KeyboardInterrupt:
-        pass
+    asyncio.run(run_server(args))
 
 
 if __name__ == "__main__":
