@@ -6,7 +6,7 @@
 <domain>
 ## Phase Boundary
 
-Python asyncio server dynamically discovers, receives, parses, validates, and buffers binary CSI UDP frames from ≥2 ESP32-S3 nodes. Supports runtime node expansion without restart. Outputs structured CSI objects ready for signal processing (Phase 3) and optionally persists raw data for Phase 5 dataset collection.
+Python asyncio server dynamically discovers, receives, parses, validates, and buffers binary CSI UDP frames from ≥1 ESP32-S3 nodes. Supports runtime node expansion without restart. Outputs structured CSI objects ready for signal processing (Phase 3) and optionally persists raw data for Phase 5 dataset collection.
 
 **Phase boundary:**
 - IN: Valid UDP stream from Phase 1 (binary frames on port 5005)
@@ -26,11 +26,11 @@ Python asyncio server dynamically discovers, receives, parses, validates, and bu
 ### Dynamic Node Discovery
 - **D-10:** Aggregator dynamically discovers nodes at runtime — no hardcoded node list
   - Discovery source: UDP source IP + embedded `node_id` in frame header
-  - Minimum: 2 nodes required for system to operate (enforced at startup or health check)
+  - Minimum: **1 node** to run basic functionality (presence detection works with single node per ADR-012)
   - Supports expansion: new nodes auto-register on first valid frame; node table is a `dict` keyed by `node_id`
   - Node removal: if no frames received for 10 seconds, mark node as stale but retain slot (don't collapse IDs)
-  - Rationale: User explicitly requested "tối thiểu 2 node để chạy và có thể mở rộng"; aligns with prunedAttentionGRU multi-node scalability
-  - Rejected: Hardcoded node list (inflexible), static config file (requires restart)
+  - Rationale: User wants basic operation with 1 node, but easy expansion to 2+ for better coverage (2-node fusion in Phase 4). prunedAttentionGRU architecture supports 8-276 classes natively for future scaling.
+  - Rejected: Hardcoded node list (inflexible), static config file (requires restart), minimum 2 nodes (too restrictive for basic deployment)
 
 ### Data Handoff to Phase 3
 - **D-06:** Asyncio Queue as inter-phase handoff mechanism
