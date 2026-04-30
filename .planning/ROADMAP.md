@@ -13,12 +13,12 @@
 |---|-------|------|--------------|------------------|
 | 1 | Firmware & Flashing | Get both ESP32-S3 nodes streaming real CSI over UDP | HW-01..HW-04 | 4 |
 | 2 | UDP Aggregator | Build Python asyncio server that ingests 2-node CSI streams | SIG-01..SIG-02 | 2 |
-| 3 | Signal Processing | Clean and feature-extract CSI (phase, Hampel, spectrogram, energy bands) | SIG-03..SIG-06 | 4 |
+| 3 | Signal Processing | Clean and feature-extract CSI for presence detection | SIG-03..SIG-06 | 4 |
 | 4 | Presence & Intrusion | Detect occupancy and emit alerts | SEC-01..SEC-04 | 4 |
-| 5 | Activity Recognition | Collect data and train 4-class lightweight classifier | ACT-01..ACT-04 | 4 |
-| 6 | Dashboard & API | Real-time web UI with heatmap, status, alerts | UI-01..UI-05, API-01..API-02 | 7 |
+| 5 | Activity Recognition | Collect data and train 4-class Attention-GRU classifier | ACT-01..ACT-05 | 5 |
+| 6 | Dashboard & API | Real-time web UI with heatmap, status, alerts | UI-01..UI-05, API-01..API-02, ACT-06 | 8 |
 
-**Total:** 6 phases | 25 requirements | 25 success criteria
+**Total:** 6 phases | 27 requirements | 27 success criteria
 
 ---
 
@@ -74,7 +74,7 @@
 
 ### Phase 3: Signal Processing
 
-**Goal:** Clean raw CSI and extract features for detection/classification.
+**Goal:** Clean raw CSI and extract features for presence detection. For Activity Recognition, minimal preprocessing (amplitude + scaler) is sufficient per Kang et al. 2025 source code analysis.
 
 **Requirements:** SIG-03, SIG-04, SIG-05, SIG-06
 
@@ -91,6 +91,9 @@
 **Canonical refs:**
 - `llm-wiki/raw/RuView/docs/adr/ADR-014-sota-signal-processing.md` — algorithms
 - `llm-wiki/raw/wallhack1.8k/datasets.py` — amplitude extraction pattern
+- `llm-wiki/raw/prunedAttentionGRU/ARIL/aril.py` — StandardScaler normalization proven sufficient for HAR
+
+**Note:** Activity Recognition does NOT require phase unwrap, Hampel, or spectrogram. Raw amplitude + StandardScaler achieves 98.92% (ARIL). Advanced DSP is only required for presence/intrusion detection robustness.
 
 **Depends on:** Phase 2
 
@@ -121,25 +124,35 @@
 
 ### Phase 5: Activity Recognition
 
-**Goal:** Train and deploy a 4-class activity classifier.
+**Goal:** Train and deploy a 4-class activity classifier using proven Attention-GRU architecture.
 
-**Requirements:** ACT-01, ACT-02, ACT-03, ACT-04
+**Requirements:** ACT-01, ACT-02, ACT-03, ACT-04, ACT-05
 
 **Success Criteria:**
-1. Dataset contains ≥100 samples per class (empty, static, walking, waving) collected in target environment
-2. Classifier achieves ≥80% accuracy on held-out test set (5-fold cross-validation)
-3. Inference latency <50 ms per 4-second window on laptop CPU
-4. Real-time classification label + confidence streamed to dashboard at 2 Hz
+1. Dataset contains ≥200 samples per class (empty, static, walking, waving) collected in target environment
+2. Attention-GRU model adapted from Kang et al. 2025 source (`nn.GRU` 128 hidden + attention 32 hidden, ~82K params) trains successfully
+3. Data augmentation implemented: `np.roll` shifting (±10 steps, 20×), MixUp (30% prob, α=1.0), multiplicative Gaussian noise (3×)
+4. Model achieves ≥90% accuracy on held-out test set (5-fold cross-validation). Target: ~95% based on paper results.
+5. Inference latency <10 ms per sample on laptop CPU (< 1M FLOPs)
 
 **Phase boundary:**
-- IN: Clean feature vectors + labeled data
-- OUT: Trained model file + real-time inference pipeline
+- IN: Labeled CSI amplitude matrices `(samples, time_steps, 52)`
+- OUT: Trained `model.pth` + real-time inference pipeline
 
 **Canonical refs:**
-- `llm-wiki/raw/wallhack1.8k/train.py` — training loop pattern
-- `llm-wiki/raw/wallhack1.8k/datasets.py` — WallhackDataset windowing logic
+- `llm-wiki/raw/prunedAttentionGRU/PrunedAttentionGRU.py` — model architecture (78 lines)
+- `llm-wiki/raw/prunedAttentionGRU/train.py` — training loop with MixUp
+- `llm-wiki/raw/prunedAttentionGRU/augmentation.py` — shifting + noise augmentation
+- `llm-wiki/raw/prunedAttentionGRU/ARIL/aril.py` — 52-subcarrier input format (exact ESP32-S3 match)
+- `llm-wiki/raw/prunedAttentionGRU/HAR/har.py` — 4-class dataset loader reference
 
-**Depends on:** Phase 3 (can parallelize data collection with Phase 4)
+**Adaptation notes:**
+- Replace `CustomGRU` (slow hand-written loop) with `nn.GRU` (10× speedup, cuDNN optimized)
+- Skip pruning code — unnecessary for our scale
+- Write `esp32_dataset.py` loader converting our CSI `.npy`/`.csv` to `(samples, time, 52)` format
+- Add validation split + early stopping (missing from original code)
+
+**Depends on:** Phase 2 (data collection can start as soon as aggregator works; minimal preprocessing needed)
 
 ---
 
@@ -202,7 +215,7 @@ Phase 3 (Signal Processing)
 To prevent scope creep, these are explicitly out of v1:
 
 - No cloud connectivity — all local
-- no on-device inference — ESP32 streams raw CSI only
+- no on-device inference for v1 — ESP32 streams raw CSI only. On-device feasible in v2 (328KB model < 520KB SRAM) but requires C port.
 - No heart rate / breathing BPM display — unreliable on ESP32-S3
 - No people counter — needs 3-6 nodes minimum
 - No pose skeleton — needs DensePose model + camera ground truth
