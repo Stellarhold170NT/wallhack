@@ -30,10 +30,11 @@
 
 ### Activity Recognition
 
-- [ ] **ACT-01**: Collect labeled dataset for 4 classes: empty, static (sitting/standing still), walking, waving arms
-- [ ] **ACT-02**: Train lightweight classifier (SVM, Random Forest, or 2-layer CNN) on amplitude features + variance + spectrogram slices
-- [ ] **ACT-03**: Real-time inference window: 4 seconds sliding with 50% overlap
-- [ ] **ACT-04**: Classification output streamed to dashboard with confidence score
+- [ ] **ACT-01**: Collect labeled dataset for 4 classes: empty, static, walking, waving. Target: ≥200 samples/class (~15 min recording per class)
+- [ ] **ACT-02**: Implement Attention-GRU model (single GRU layer 128 hidden + attention 32 hidden, ~58K params after pruning) per Kang et al. 2025
+- [ ] **ACT-03**: Data augmentation pipeline: temporal shifting (±10 steps), MixUp (α=1.0), Gaussian noise (σ²=0.0001)
+- [ ] **ACT-04**: Real-time inference window: 4 seconds sliding with 50% overlap; target accuracy ≥90% on held-out test
+- [ ] **ACT-05**: Classification output streamed to dashboard with confidence score
 
 ### Dashboard & API
 
@@ -103,6 +104,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ACT-02 | Phase 5 | Pending |
 | ACT-03 | Phase 5 | Pending |
 | ACT-04 | Phase 5 | Pending |
+| ACT-05 | Phase 6 | Pending |
 | UI-01 | Phase 6 | Pending |
 | UI-02 | Phase 6 | Pending |
 | UI-03 | Phase 6 | Pending |
@@ -112,8 +114,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | API-02 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 25 total
-- Mapped to phases: 25
+- v1 requirements: 26 total
+- Mapped to phases: 26
 - Unmapped: 0 ✓
 
 ---

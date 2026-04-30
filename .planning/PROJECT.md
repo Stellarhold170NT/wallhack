@@ -36,7 +36,7 @@ Reliable presence detection and simple activity classification (empty / static /
 - **Hardware**: 2x ESP32-S3-DevKitC-1 (~$20 total)
 - **Aggregator**: Laptop/PC running Python (Windows/Linux/macOS)
 - **Stack**: ESP-IDF C (firmware) → Python asyncio (aggregator) → numpy/scipy (DSP) → scikit-learn (lightweight ML) → Flask/FastAPI + WebSocket (dashboard)
-- **Reference projects**: RuView (Rust, ~21k LOC, 65 WASM modules — too heavy for 2-node hobby setup), Wallhack1.8k (PyTorch dataloader, 3-class ResNet18)
+- **Reference projects**: RuView (Rust, ~21k LOC, 65 WASM modules — too heavy for 2-node hobby setup), Wallhack1.8k (PyTorch dataloader, 3-class ResNet18), Kang et al. 2025 (GRU+Attention, 57.8K params, 98.92% accuracy)
 - **CSI format**: ESP-IDF `wifi_csi_info_t`, 52-56 subcarriers, I/Q pairs, 20-100 Hz sampling
 
 ## Constraints
@@ -44,7 +44,7 @@ Reliable presence detection and simple activity classification (empty / static /
 - **Hardware**: Only 2 ESP32-S3 nodes. No Intel 5300 / Atheros NICs. No Cognitum Seed.
 - **Accuracy ceiling**: ESP32-S3 consumer-grade CSI is noisier than research NICs. We accept "good enough" for presence/motion, not medical/clinical precision.
 - **Time**: 6 weeks target for v1.
-- **ML data**: No custom dataset yet. Will bootstrap with Wallhack1.8k for architecture, then collect own data.
+- **ML data**: No custom dataset yet. Kang et al. 2025 proves 4-6 class HAR achieves >98% with GRU+Attention + data augmentation (shifting ±10 steps is critical). Will replicate their architecture and collect own ESP32-S3 labeled data.
 - **Compute**: Inference must run on laptop, not ESP32.
 
 ## Key Decisions
@@ -52,7 +52,7 @@ Reliable presence detection and simple activity classification (empty / static /
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
 | Python backend (not Rust) | Faster iteration, rich DSP/ML libraries, team familiarity | — Pending |
-| Scikit-learn / lightweight CNN (not ResNet18) | Wallhack1.8k uses ResNet18 but that's overkill for 4-class amplitude features; SVM/RandomForest or small 2-layer CNN trains in seconds | — Pending |
+| GRU+Attention model (not ResNet18/SVM) | Kang et al. 2025 [Sensors 25, 1547] proves single-layer GRU (128 hidden) + attention (32 hidden) achieves 98.92% on ARIL with only 57.8K params — 4000x smaller than SOTA. Replaces Wallhack1.8k's ResNet18 (11M params). | — Pending |
 | 2-node feature-level fusion (not signal-level) | Clock drift (~20-50 ppm) makes cross-node phase alignment impossible. Fuse decisions/features, not raw I/Q (ADR-012). | — Pending |
 | Skip heart rate & people counting | ADR-012 and ADR-021 explicitly mark these as unreliable on ESP32-S3. Avoid wasted effort. | — Pending |
 
