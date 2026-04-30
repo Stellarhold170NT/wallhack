@@ -2,7 +2,7 @@
 
 **Project:** ESP32-S3 CSI Wallhack
 **Milestone:** v1.0 — Basic Sensing Pipeline
-**Current Phase:** Planning Complete — Ready for Phase 1
+**Current Phase:** Phase 1 Complete — Ready for Phase 2
 **Last Updated:** 2026-04-30
 
 ## Project Reference
@@ -10,13 +10,13 @@
 See: `.planning/PROJECT.md` (updated 2026-04-30)
 
 **Core value:** Reliable presence detection and activity classification (7 classes: walking, running, sitting down, standing up, lying down, bending, falling) using 2 ESP32-S3 nodes — architecture supports multi-node scalability.
-**Current focus:** Phase 1 — Firmware & Flashing
+**Current focus:** Phase 2 — UDP Aggregator
 
 ## Phase Status
 
 | Phase | Status | Requirements | Success Criteria |
 |-------|--------|--------------|------------------|
-| 1: Firmware & Flashing | 🔴 Not started | HW-01..HW-04 | 0/4 |
+| 1: Firmware & Flashing | ✓ Complete | HW-01..HW-04 | 4/4 |
 | 2: UDP Aggregator | 🔴 Not started | SIG-01..SIG-02 | 0/2 |
 | 3: Signal Processing | 🔴 Not started | SIG-03..SIG-06 | 0/4 |
 | 4: Presence & Intrusion | 🔴 Not started | SEC-01..SEC-04 | 0/4 |
@@ -54,6 +54,13 @@ None at project start.
 - Updated: ROADMAP.md (Phase 5 goal, success criteria, adaptation notes)
 - Risk noted: transitions (sit/stand/lying) may need 2s windows; falling requires synthetic/augmented data
 
+**2026-04-30 — Phase 1 Execution Complete**
+- Executed 3 waves (01-01 scaffolding, 01-02 core modules, 01-03 integration)
+- Commits: 1f46096, 781d1c0, e70dc19
+- UAT: 14/14 code-level tests passed, 3 blocked (require hardware)
+- Artifacts: firmware/esp32-csi-node/ with complete ESP-IDF project
+- Ready for Phase 2: UDP Aggregator
+
 ---
 *State initialized: 2026-04-30*
-*Last updated: 2026-04-30 after scope expansion (4→7 classes)*
+*Last updated: 2026-04-30 after Phase 1 execution*
