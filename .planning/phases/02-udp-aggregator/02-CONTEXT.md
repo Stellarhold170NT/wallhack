@@ -121,6 +121,7 @@ Python asyncio server dynamically discovers, receives, parses, validates, and bu
 <deferred>
 ## Deferred Ideas
 
+- **Web UI for real-time monitoring** (Phase 6 Dashboard) — User explicitly suggested adding a web interface to display frame rates, loss %, and node health. This belongs in Phase 6 but the aggregator already exposes all needed data (`nodes` dict, `queue`, FPS logs).
 - WebSocket streaming to browser (Phase 6 Dashboard)
 - Real-time `.npy` visualization during collection
 - Multi-aggregator clustering (out of v1 scope)
