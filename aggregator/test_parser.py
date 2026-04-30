@@ -34,17 +34,17 @@ def build_frame(node_id, sequence, rssi, noise_floor, iq_pairs):
     return magic + nid + antennas + n_sub + freq + seq + rssi_b + nf_b + reserved + iq
 
 
-def _make_52_iq(value=10):
-    """Generate 52 identical (I, Q) pairs for test frames."""
-    return [(value, value) for _ in range(52)]
+def _make_64_iq(value=10):
+    """Generate 64 identical (I, Q) pairs for test frames."""
+    return [(value, value) for _ in range(64)]
 
 
 class TestParseValidFrame:
     """Valid frame parsing tests."""
 
     def test_parse_valid_frame_all_fields(self):
-        """Full 52-subcarrier frame parses correctly with all fields."""
-        iq = _make_52_iq(10)
+        """Full 64-subcarrier frame parses correctly with all fields."""
+        iq = _make_64_iq(10)
         data = build_frame(node_id=3, sequence=42, rssi=-55, noise_floor=-90, iq_pairs=iq)
         frame = parse_frame(data)
 
@@ -55,26 +55,26 @@ class TestParseValidFrame:
         assert frame.rssi == -55
         assert frame.noise_floor == -90
         assert frame.frequency_mhz == 2412
-        assert frame.n_subcarriers == 52
-        assert len(frame.amplitudes) == 52
-        assert len(frame.phases) == 52
+        assert frame.n_subcarriers == 64
+        assert len(frame.amplitudes) == 64
+        assert len(frame.phases) == 64
 
-    def test_parse_valid_frame_52_subcarriers(self):
-        """Parser returns exactly 52 amplitudes and phases."""
-        iq = _make_52_iq(5)
+    def test_parse_valid_frame_64_subcarriers(self):
+        """Parser returns exactly 64 amplitudes and phases."""
+        iq = _make_64_iq(5)
         data = build_frame(node_id=1, sequence=100, rssi=-30, noise_floor=-85, iq_pairs=iq)
         frame = parse_frame(data)
 
         assert frame is not None
-        assert frame.n_subcarriers == 52
-        assert len(frame.amplitudes) == 52
-        assert len(frame.phases) == 52
+        assert frame.n_subcarriers == 64
+        assert len(frame.amplitudes) == 64
+        assert len(frame.phases) == 64
 
-    def test_parse_frame_size_124_bytes(self):
-        """Verify 52-subcarrier frame is exactly 124 bytes."""
-        iq = _make_52_iq(0)
+    def test_parse_frame_size_148_bytes(self):
+        """Verify 64-subcarrier frame is exactly 148 bytes."""
+        iq = _make_64_iq(0)
         data = build_frame(node_id=0, sequence=0, rssi=-1, noise_floor=-1, iq_pairs=iq)
-        assert len(data) == 124
+        assert len(data) == 148
         frame = parse_frame(data)
         assert frame is not None
 
@@ -93,7 +93,7 @@ class TestParseInvalidFrame:
         assert frame is None
 
     def test_parse_length_mismatch(self):
-        """Header n_subcarriers says 52 but only 50 I/Q pairs provided → None."""
+        """Header n_subcarriers says 64 but only 50 I/Q pairs provided → None."""
         iq_50 = [(5, 5)] * 50
         data = build_frame(node_id=1, sequence=1, rssi=-40, noise_floor=-80, iq_pairs=iq_50)
         # The header says 50 subcarriers, but let's test with a frame
@@ -101,12 +101,12 @@ class TestParseInvalidFrame:
         # Build frame with n_sub=10 IQ pairs
         iq_10 = [(3, 3)] * 10
         data = build_frame(node_id=1, sequence=1, rssi=-40, noise_floor=-80, iq_pairs=iq_10)
-        # Now corrupt n_subcarriers field to claim 52 instead of 10
+        # Now corrupt n_subcarriers field to claim 64 instead of 10
         # The n_sub field is at bytes 6-7 (little-endian uint16)
         bad = bytearray(data)
-        struct.pack_into("<H", bad, 6, 52)  # Claim 52 subcarriers
+        struct.pack_into("<H", bad, 6, 64)  # Claim 64 subcarriers
         frame = parse_frame(bytes(bad))
-        # Frame is 20 + 10*2 = 40 bytes but header claims 52 → 124 bytes expected
+        # Frame is 20 + 10*2 = 40 bytes but header claims 64 → 124 bytes expected
         assert frame is None
 
     def test_parse_truncated_frame(self):
@@ -157,13 +157,13 @@ class TestAmplitudePhase:
         assert frame.amplitudes[0] == 0.0
 
     def test_multiple_subcarriers_all_correct(self):
-        """All 52 subcarriers have correct amplitudes and phases."""
-        iq = [(i % 10, (i + 5) % 10) for i in range(52)]
+        """All 64 subcarriers have correct amplitudes and phases."""
+        iq = [(i % 10, (i + 5) % 10) for i in range(64)]
         data = build_frame(node_id=1, sequence=50, rssi=-20, noise_floor=-70, iq_pairs=iq)
         frame = parse_frame(data)
         assert frame is not None
-        assert len(frame.amplitudes) == 52
-        assert len(frame.phases) == 52
+        assert len(frame.amplitudes) == 64
+        assert len(frame.phases) == 64
         for i, (expected_i, expected_q) in enumerate(iq):
             expected_amp = math.sqrt(expected_i * expected_i + expected_q * expected_q)
             expected_ph = math.atan2(expected_q, expected_i)
@@ -176,7 +176,7 @@ class TestCorruptedFrame:
 
     def test_parse_corrupted_iq_region(self):
         """Garbage bytes in IQ region should still parse (struct.unpack handles any byte)."""
-        iq = [(3, 4)] * 52
+        iq = [(3, 4)] * 64
         data = build_frame(node_id=2, sequence=10, rssi=-30, noise_floor=-80, iq_pairs=iq)
         # Overwrite IQ region with random bytes
         bad = bytearray(data)
@@ -185,8 +185,8 @@ class TestCorruptedFrame:
         frame = parse_frame(bytes(bad))
         # Should still produce a valid frame — any byte value is valid int8
         assert frame is not None
-        assert frame.n_subcarriers == 52
-        assert len(frame.amplitudes) == 52
+        assert frame.n_subcarriers == 64
+        assert len(frame.amplitudes) == 64
 
     def test_parse_1000_random_frames_no_crash(self):
         """Fuzz test: 1000 random-byte frames should never raise."""
@@ -212,14 +212,14 @@ class TestCSIFrameDataclass:
             rssi=-55,
             noise_floor=-90,
             frequency_mhz=2412,
-            n_subcarriers=52,
-            amplitudes=[1.0] * 52,
-            phases=[0.5] * 52,
+            n_subcarriers=64,
+            amplitudes=[1.0] * 64,
+            phases=[0.5] * 64,
         )
         assert frame.node_id == 1
         assert frame.sequence == 42
-        assert len(frame.amplitudes) == 52
-        assert len(frame.phases) == 52
+        assert len(frame.amplitudes) == 64
+        assert len(frame.phases) == 64
 
     def test_amplitudes_length_matches_n_subcarriers(self):
         """Amplitude list must match n_subcarriers."""
@@ -227,9 +227,9 @@ class TestCSIFrameDataclass:
             CSIFrame(
                 node_id=1,
                 sequence=0,
-                n_subcarriers=52,
+                n_subcarriers=64,
                 amplitudes=[1.0] * 10,
-                phases=[0.0] * 52,
+                phases=[0.0] * 64,
             )
 
     def test_phases_length_matches_n_subcarriers(self):
@@ -238,7 +238,7 @@ class TestCSIFrameDataclass:
             CSIFrame(
                 node_id=1,
                 sequence=0,
-                n_subcarriers=52,
-                amplitudes=[1.0] * 52,
+                n_subcarriers=64,
+                amplitudes=[1.0] * 64,
                 phases=[0.0] * 10,
             )

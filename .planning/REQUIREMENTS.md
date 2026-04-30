@@ -7,7 +7,7 @@
 
 ### Hardware & Firmware
 
-- [ ] **HW-01**: ESP32-S3 firmware captures CSI via ESP-IDF `esp_wifi_set_csi_rx_cb()` with 52 subcarriers, 20-50 Hz
+- [ ] **HW-01**: ESP32-S3 firmware captures CSI via ESP-IDF `esp_wifi_set_csi_rx_cb()` with 64 subcarriers, 20-50 Hz
 - [ ] **HW-02**: Firmware serializes CSI into binary UDP frame (magic header + node_id + I/Q payload)
 - [ ] **HW-03**: Provisioning tool configures WiFi SSID/password and target aggregator IP via serial
 - [ ] **HW-04**: Both nodes stream CSI concurrently to aggregator on configurable UDP port
@@ -15,7 +15,7 @@
 ### Data Ingestion & Signal Processing
 
 - [ ] **SIG-01**: Python aggregator receives UDP packets from 2 nodes asynchronously
-- [ ] **SIG-02**: Parser validates frame magic, extracts amplitude `sqrt(I^2+Q^2)` and phase `atan2(Q,I)` per subcarrier
+- [ ] **SIG-02**: Parser validates frame magic, extracts amplitude `sqrt(I^2+Q^2)` and phase `atan2(Q,I)` per subcarrier (64 subcarriers)
 - [ ] **SIG-03**: Phase sanitizer unwraps phase and removes linear trend
 - [ ] **SIG-04**: Hampel outlier filter removes spike artifacts per subcarrier
 - [ ] **SIG-05**: Sliding window (4 seconds / ~200 frames) produces spectrogram or amplitude matrix
@@ -33,7 +33,7 @@
 - [ ] **ACT-01**: Collect labeled dataset for 7 classes: walking, running, sitting down, standing up, lying down, bending, falling. Target: ≥200 samples/class (~15 min recording per class). Note: transitions (sit/stand/lying) may need shorter 2s windows.
 - [ ] **ACT-02**: Implement Attention-GRU model per Kang et al. 2025 source code: `nn.GRU` (128 hidden) + additive attention (32 hidden) + FC. ~82K params. Skip pruning for v1.
 - [ ] **ACT-03**: Data augmentation pipeline: temporal shifting (`np.roll` ±10 steps, 20× expansion), MixUp (30% probability, α=1.0), multiplicative Gaussian noise (3× copies)
-- [ ] **ACT-04**: Input preprocessing: amplitude extraction → `(samples, time_steps, 52)` → per-channel StandardScaler. No phase unwrap/Hampel needed for HAR.
+- [ ] **ACT-04**: Input preprocessing: amplitude extraction → `(samples, time_steps, 64)` → per-channel StandardScaler. No phase unwrap/Hampel needed for HAR.
 - [ ] **ACT-05**: Real-time inference window: 4 seconds sliding with 50% overlap (2s adaptive for transitions); target accuracy ≥85% on held-out test with ESP32-S3 CSI. Architecture supports up to 276 classes (Sign-Fi proven) for multi-node expansion.
 - [ ] **ACT-06**: Classification output streamed to dashboard with confidence score
 

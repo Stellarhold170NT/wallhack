@@ -32,8 +32,8 @@ def build_frame(node_id, sequence, rssi, noise_floor, iq_pairs):
     return magic + nid + antennas + n_sub + freq + seq + rssi_b + nf_b + reserved + iq
 
 
-def _make_52_iq(value=10):
-    return [(value, value) for _ in range(52)]
+def _make_64_iq(value=10):
+    return [(value, value) for _ in range(64)]
 
 
 class TestPersistence:
@@ -48,9 +48,9 @@ class TestPersistence:
                     rssi=-30,
                     noise_floor=-80,
                     frequency_mhz=2412,
-                    n_subcarriers=52,
-                    amplitudes=[float(v) for v in range(52)],
-                    phases=[0.0] * 52,
+                    n_subcarriers=64,
+                    amplitudes=[float(v) for v in range(64)],
+                    phases=[0.0] * 64,
                 )
                 writer.write(frame)
 
@@ -63,7 +63,7 @@ class TestPersistence:
             assert len(npy_files) == 1
 
             arr = np.load(npy_files[0])
-            assert arr.shape == (10, 52)
+            assert arr.shape == (10, 64)
             assert arr.dtype == np.float32
 
             json_files = list(session_dirs[0].glob("*.json"))
@@ -71,7 +71,7 @@ class TestPersistence:
             meta = json.loads(json_files[0].read_text())
             assert meta["node_id"] == 1
             assert meta["frame_count"] == 10
-            assert meta["shape"] == [10, 52]
+            assert meta["shape"] == [10, 64]
 
     def test_npy_writer_rotation(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -80,9 +80,9 @@ class TestPersistence:
                 frame = CSIFrame(
                     node_id=1,
                     sequence=i,
-                    n_subcarriers=52,
-                    amplitudes=[float(i)] * 52,
-                    phases=[0.0] * 52,
+                    n_subcarriers=64,
+                    amplitudes=[float(i)] * 64,
+                    phases=[0.0] * 64,
                 )
                 writer.write(frame)
             writer.flush_all()
@@ -99,9 +99,9 @@ class TestPersistence:
                 frame = CSIFrame(
                     node_id=2,
                     sequence=i,
-                    n_subcarriers=52,
-                    amplitudes=[1.0] * 52,
-                    phases=[0.0] * 52,
+                    n_subcarriers=64,
+                    amplitudes=[1.0] * 64,
+                    phases=[0.0] * 64,
                 )
                 writer.write(frame)
             writer.flush_all()
@@ -123,7 +123,7 @@ class TestEndToEnd:
             actual_port = addr[1]
 
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            iq = _make_52_iq(5)
+            iq = _make_64_iq(5)
 
             for i in range(5):
                 data = build_frame(

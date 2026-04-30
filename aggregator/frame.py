@@ -35,7 +35,7 @@ class CSIFrame:
     rssi: int = 0
     noise_floor: int = 0
     frequency_mhz: int = 0
-    n_subcarriers: int = 52
+    n_subcarriers: int = 64
     amplitudes: list[float] = field(default_factory=list)
     phases: list[float] = field(default_factory=list)
 
