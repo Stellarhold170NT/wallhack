@@ -77,6 +77,36 @@ class NpyWriter:
         npy_path = session_dir / f"node_{node_id}_{ts}_{batch:04d}.npy"
         meta_path = session_dir / f"node_{node_id}_{ts}_{batch:04d}.json"
 
+        # Debug: log amplitude list lengths before converting to array
+        lengths = [len(a) for a in self._buffers[node_id]]
+        unique_lengths = sorted(set(lengths))
+        logger.debug(
+            "Node %d buffer: %d frames, subcarrier lengths: min=%d max=%d unique=%s",
+            node_id,
+            len(self._buffers[node_id]),
+            min(lengths) if lengths else 0,
+            max(lengths) if lengths else 0,
+            unique_lengths,
+        )
+
+        if len(unique_lengths) > 1:
+            logger.warning(
+                "Node %d has INCONSISTENT subcarrier counts: %s. "
+                "Filtering to most common length to avoid crash.",
+                node_id,
+                unique_lengths,
+            )
+            most_common_len = max(unique_lengths, key=lengths.count)
+            self._buffers[node_id] = [
+                a for a in self._buffers[node_id] if len(a) == most_common_len
+            ]
+            logger.info(
+                "Node %d: filtered to %d frames with %d subcarriers",
+                node_id,
+                len(self._buffers[node_id]),
+                most_common_len,
+            )
+
         arr = np.array(self._buffers[node_id], dtype=np.float32)
         np.save(npy_path, arr)
 
