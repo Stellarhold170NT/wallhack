@@ -47,6 +47,13 @@
 
 **Depends on:** None (first phase)
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Project scaffolding and header files
+- [ ] 01-02-PLAN.md — Core C modules (NVS config, CSI collector, UDP sender)
+- [ ] 01-03-PLAN.md — Integration (main.c), provisioning tool, build scripts, verification
+
 ---
 
 ### Phase 2: UDP Aggregator
