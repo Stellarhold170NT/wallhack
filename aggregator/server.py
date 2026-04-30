@@ -62,7 +62,8 @@ class CsiUdpServer(asyncio.DatagramProtocol):
         self._fps_task: asyncio.Task | None = None
         self._stale_task: asyncio.Task | None = None
         self._prev_frame_counts: dict[int, int] = {}
-        self._loss_history: dict[int, deque[int]] = {}
+        # History stores (frame_count, loss_count) snapshots per second for accurate sustained loss calculation
+        self._history: dict[int, deque[tuple[int, int]]] = {}
 
     def connection_made(self, transport: asyncio.DatagramTransport) -> None:
         self.transport = transport
@@ -93,7 +94,7 @@ class CsiUdpServer(asyncio.DatagramProtocol):
                 last_sequence=frame.sequence,
             )
             self._prev_frame_counts[node_id] = 0
-            self._loss_history[node_id] = deque(maxlen=10)
+            self._history[node_id] = deque(maxlen=11)
             logger.info("Discovered new node %d at %s:%d", node_id, addr[0], addr[1])
         else:
             node = self.nodes[node_id]
@@ -149,9 +150,9 @@ class CsiUdpServer(asyncio.DatagramProtocol):
                 fps = node.frame_count - prev
                 self._prev_frame_counts[node_id] = node.frame_count
 
-                loss_hist = self._loss_history.get(node_id)
-                if loss_hist is not None:
-                    loss_hist.append(node.loss_count)
+                hist = self._history.get(node_id)
+                if hist is not None:
+                    hist.append((node.frame_count, node.loss_count))
 
                 logger.info(
                     "Node %d: %d fps, %d total frames, %d dropped, %d loss",
@@ -162,19 +163,16 @@ class CsiUdpServer(asyncio.DatagramProtocol):
                     node.loss_count,
                 )
 
-                if loss_hist and len(loss_hist) == 10:
-                    recent_loss = sum(
-                        loss_hist[i] - loss_hist[i - 1]
-                        for i in range(1, len(loss_hist))
-                    )
-                    recent_frames = node.frame_count - (
-                        node.frame_count - sum(1 for _ in loss_hist if _ >= 0)
-                    )
+                if hist and len(hist) == 11:
+                    old_frames, old_loss = hist[0]
+                    new_frames, new_loss = hist[-1]
+                    recent_frames = new_frames - old_frames
+                    recent_loss = new_loss - old_loss
                     if recent_frames > 0:
                         sustained = recent_loss / recent_frames
                         if sustained > 0.05:
                             logger.warning(
-                                "Node %d: sustained loss %.1f%% (alert threshold 5%%)",
+                                "Node %d: sustained loss %.1f%% (alert threshold 5%%) over last ~10s",
                                 node_id,
                                 sustained * 100,
                             )
