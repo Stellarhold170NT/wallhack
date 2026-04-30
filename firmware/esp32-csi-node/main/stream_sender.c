@@ -4,7 +4,9 @@
 #include "esp_timer.h"
 #include "lwip/sockets.h"
 #include "lwip/netdb.h"
-#include "sdkconfig.h"
+
+#define DEFAULT_TARGET_IP   "192.168.1.100"
+#define DEFAULT_TARGET_PORT 5005
 
 static const char *TAG = "stream_sender";
 static int s_sock = -1;
@@ -38,7 +40,7 @@ static int sender_init_internal(const char *ip, uint16_t port)
 
 int stream_sender_init(void)
 {
-    return sender_init_internal(CONFIG_CSI_TARGET_IP, CONFIG_CSI_TARGET_PORT);
+    return sender_init_internal(DEFAULT_TARGET_IP, DEFAULT_TARGET_PORT);
 }
 
 int stream_sender_init_with(const char *ip, uint16_t port)
