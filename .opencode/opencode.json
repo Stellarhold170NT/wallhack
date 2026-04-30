@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "read": {
+      "E:/nt170/wallhack/.opencode/get-shit-done/*": "allow"
+    },
+    "external_directory": {
+      "E:/nt170/wallhack/.opencode/get-shit-done/*": "allow"
+    }
+  }
+}
