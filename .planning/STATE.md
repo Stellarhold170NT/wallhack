@@ -17,7 +17,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-30)
 | Phase | Status | Requirements | Success Criteria |
 |-------|--------|--------------|------------------|
 | 1: Firmware & Flashing | ✓ Complete | HW-01..HW-04 | 4/4 |
-| 2: UDP Aggregator | 🔴 Not started | SIG-01..SIG-02 | 0/2 |
+| 2: UDP Aggregator | 🟡 Context gathered | SIG-01..SIG-02 | 0/2 |
 | 3: Signal Processing | 🔴 Not started | SIG-03..SIG-06 | 0/4 |
 | 4: Presence & Intrusion | 🔴 Not started | SEC-01..SEC-04 | 0/4 |
 | 5: Activity Recognition | 🔴 Not started | ACT-01..ACT-05 | 0/5 |
@@ -60,6 +60,16 @@ None at project start.
 - UAT: 14/14 code-level tests passed, 3 blocked (require hardware)
 - Artifacts: firmware/esp32-csi-node/ with complete ESP-IDF project
 - Ready for Phase 2: UDP Aggregator
+
+**2026-04-30 — Phase 2 Context Gathered**
+- User confirmed: Node 0 and Node 1 are peers (both STA-only, no dedicated TX)
+- Decisions captured:
+  - D-06: Asyncio Queue for Phase 3 handoff
+  - D-07: Drop Oldest (ring buffer) per node, default 500 frames
+  - D-08: Raw data persisted as `.npy` for Phase 5 dataset collection
+  - D-09: Strict frame validation with graceful degradation
+- Artifact: `.planning/phases/02-udp-aggregator/02-CONTEXT.md`
+- Next step: `/gsd-plan-phase 2`
 
 ---
 *State initialized: 2026-04-30*
