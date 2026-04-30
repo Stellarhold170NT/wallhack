@@ -2,7 +2,7 @@
 
 **Project:** ESP32-S3 CSI Wallhack
 **Milestone:** v1.0 — Basic Sensing Pipeline
-**Current Phase:** Phase 1 Complete — Ready for Phase 2
+**Current Phase:** Phase 2 Planned — Ready to execute
 **Last Updated:** 2026-04-30
 
 ## Project Reference
@@ -17,7 +17,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-30)
 | Phase | Status | Requirements | Success Criteria |
 |-------|--------|--------------|------------------|
 | 1: Firmware & Flashing | ✓ Complete | HW-01..HW-04 | 4/4 |
-| 2: UDP Aggregator | 🟡 Context gathered | SIG-01..SIG-02 | 0/2 |
+| 2: UDP Aggregator | ✓ Planned | SIG-01..SIG-02 | 0/2 |
 | 3: Signal Processing | 🔴 Not started | SIG-03..SIG-06 | 0/4 |
 | 4: Presence & Intrusion | 🔴 Not started | SEC-01..SEC-04 | 0/4 |
 | 5: Activity Recognition | 🔴 Not started | ACT-01..ACT-05 | 0/5 |
