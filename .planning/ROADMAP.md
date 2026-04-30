@@ -77,6 +77,13 @@ Plans:
 
 **Depends on:** Phase 1
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Frame dataclass and binary parser with unit tests
+- [ ] 02-02-PLAN.md — Asyncio UDP server, dynamic discovery, and ring buffer
+- [ ] 02-03-PLAN.md — CLI entry point, .npy persistence, and integration tests
+
 ---
 
 ### Phase 3: Signal Processing
