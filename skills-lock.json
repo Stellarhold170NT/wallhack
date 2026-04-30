@@ -1,6 +1,12 @@
 {
   "version": 1,
   "skills": {
+    "bruno-ai-context": {
+      "source": "StellarHold170NT/bruno-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "e675d23703d9cc2ef109065440c665a3377871616f7b6a146fcf2f98dd3ff48b"
+    },
     "caveman": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -12,6 +18,48 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/diagnose/SKILL.md",
       "computedHash": "1c3c85517ac42116fe5f2bfb5150f7b3e38ad23808e40b33fbb01f1afb611983"
+    },
+    "gitnexus-cli": {
+      "source": "abhigyanpatwari/gitnexus",
+      "sourceType": "github",
+      "skillPath": "gitnexus-claude-plugin/skills/gitnexus-cli/SKILL.md",
+      "computedHash": "c94ef8869802f6994fd2a42309aa14eda4da2f48112a559c7c5d107fba797145"
+    },
+    "gitnexus-debugging": {
+      "source": "abhigyanpatwari/gitnexus",
+      "sourceType": "github",
+      "skillPath": "gitnexus-claude-plugin/skills/gitnexus-debugging/SKILL.md",
+      "computedHash": "3b096801e001223de33405962c75fdeee5b6af7e6b42a79644c9f835b0ed7071"
+    },
+    "gitnexus-exploring": {
+      "source": "abhigyanpatwari/gitnexus",
+      "sourceType": "github",
+      "skillPath": "gitnexus-claude-plugin/skills/gitnexus-exploring/SKILL.md",
+      "computedHash": "8d3aa1c7e009238e07a77cab1932e6bdb345814f7dbddb2abbe89ac443c49345"
+    },
+    "gitnexus-guide": {
+      "source": "abhigyanpatwari/gitnexus",
+      "sourceType": "github",
+      "skillPath": "gitnexus-claude-plugin/skills/gitnexus-guide/SKILL.md",
+      "computedHash": "0e663671ebbdd476ed97b4086d2736490787c99b30fd61dc8999e6564fdd038b"
+    },
+    "gitnexus-impact-analysis": {
+      "source": "abhigyanpatwari/gitnexus",
+      "sourceType": "github",
+      "skillPath": "gitnexus-claude-plugin/skills/gitnexus-impact-analysis/SKILL.md",
+      "computedHash": "15c7f2f6c04e8c1c2687bd4c08635162499f64b1bf257e87866c233504b1e67c"
+    },
+    "gitnexus-pr-review": {
+      "source": "abhigyanpatwari/gitnexus",
+      "sourceType": "github",
+      "skillPath": "gitnexus-claude-plugin/skills/gitnexus-pr-review/SKILL.md",
+      "computedHash": "99b5242de32fd429e4e98e354e5df88664042d1eecb3b28de92acd905146894b"
+    },
+    "gitnexus-refactoring": {
+      "source": "abhigyanpatwari/gitnexus",
+      "sourceType": "github",
+      "skillPath": "gitnexus-claude-plugin/skills/gitnexus-refactoring/SKILL.md",
+      "computedHash": "ebc60a8570c754cf2274368c890646c3ce7ef96561051a78d36bfb392514627f"
     },
     "grill-me": {
       "source": "mattpocock/skills",
@@ -30,6 +78,12 @@
       "sourceType": "github",
       "skillPath": "skills/engineering/improve-codebase-architecture/SKILL.md",
       "computedHash": "2da1d23b8f53cfe67f2e0b68924ab9f4ec400bb6480de097007eeaeb517d1722"
+    },
+    "markitdown": {
+      "source": "davila7/claude-code-templates",
+      "sourceType": "github",
+      "skillPath": "cli-tool/components/skills/scientific/markitdown/SKILL.md",
+      "computedHash": "1b2ff0693423568ec77669ccb66c7e07363ae3aabef1ff73987490f257d4d46b"
     },
     "setup-matt-pocock-skills": {
       "source": "mattpocock/skills",
