@@ -1,10 +1,5 @@
 <img width="3639" height="716" alt="image" src="https://github.com/user-attachments/assets/e91fbb8e-64b4-4b1d-95be-70b79b4a7efb" />
 
-<h1 align="center">Wallhack</h1>
-
-<h2 align="center">
-Turning WiFi signals into eyes
-</h2>
 
 
 # ESP32-S3 CSI Wallhack - Setup Guide
