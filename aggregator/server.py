@@ -14,7 +14,7 @@ from collections import deque
 
 from .frame import CSIFrame  # noqa: F401 — used via parse_frame return type
 from .parser import parse_frame
-from .buffer import NodeBuffer
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +25,6 @@ class NodeState:
 
     node_id: int
     addr: tuple[str, int]
-    buffer: NodeBuffer
     last_seen: float = 0.0
     frame_count: int = 0
     loss_count: int = 0
@@ -50,10 +49,8 @@ class CsiUdpServer(asyncio.DatagramProtocol):
         self,
         port: int = 5005,
         queue: asyncio.Queue | None = None,
-        buffer_capacity: int = 500,
     ) -> None:
         self.port = port
-        self.buffer_capacity = buffer_capacity
         self.queue: asyncio.Queue = queue or asyncio.Queue(maxsize=0)
         self.nodes: dict[int, NodeState] = {}
         self.transport: asyncio.DatagramTransport | None = None
@@ -83,11 +80,9 @@ class CsiUdpServer(asyncio.DatagramProtocol):
         node_id = frame.node_id
 
         if node_id not in self.nodes:
-            buffer = NodeBuffer(node_id, capacity=self.buffer_capacity)
             self.nodes[node_id] = NodeState(
                 node_id=node_id,
                 addr=addr,
-                buffer=buffer,
                 last_seen=time.monotonic(),
                 frame_count=1,
                 loss_count=0,
@@ -110,7 +105,6 @@ class CsiUdpServer(asyncio.DatagramProtocol):
             node.last_sequence = frame.sequence
 
         node = self.nodes[node_id]
-        node.buffer.push(frame)
 
         try:
             self.queue.put_nowait(frame)
@@ -155,11 +149,10 @@ class CsiUdpServer(asyncio.DatagramProtocol):
                     hist.append((node.frame_count, node.loss_count))
 
                 logger.info(
-                    "Node %d: %d fps, %d total frames, %d dropped, %d loss",
+                    "Node %d: %d fps, %d total frames, %d loss",
                     node_id,
                     fps,
                     node.frame_count,
-                    node.buffer.drop_count,
                     node.loss_count,
                 )
 

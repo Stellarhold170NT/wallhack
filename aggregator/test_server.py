@@ -122,8 +122,6 @@ class TestServer:
         server.datagram_received(data2, ("192.168.1.30", 5005))
         server.datagram_received(data3, ("192.168.1.30", 5005))
         assert server.nodes[3].frame_count == 3
-        assert server.nodes[3].buffer is not None
-        assert len(server.nodes[3].buffer) == 3
 
     def test_server_sequence_gap(self):
         server = CsiUdpServer()

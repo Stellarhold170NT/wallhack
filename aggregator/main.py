@@ -6,7 +6,7 @@ Optionally wires in the CsiProcessor for real-time signal processing.
 
 Usage:
     python -m aggregator --port 5005
-    python -m aggregator --port 5005 --output-dir data/my_session --buffer-capacity 1000
+    python -m aggregator --port 5005 --output-dir data/my_session
 """
 
 import asyncio
@@ -46,7 +46,6 @@ async def run_server(args: argparse.Namespace) -> None:
     server = CsiUdpServer(
         port=args.port,
         queue=raw_queue,
-        buffer_capacity=args.buffer_capacity,
     )
     writer = NpyWriter(
         output_dir=args.output_dir,
@@ -156,12 +155,6 @@ def main() -> None:
     )
     parser.add_argument(
         "--port", type=int, default=5005, help="UDP port to listen on (default: 5005)"
-    )
-    parser.add_argument(
-        "--buffer-capacity",
-        type=int,
-        default=500,
-        help="Max frames per node before dropping oldest (default: 500)",
     )
     parser.add_argument(
         "--output-dir",

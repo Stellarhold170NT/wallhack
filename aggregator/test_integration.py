@@ -167,10 +167,9 @@ class TestCLI:
         parser.add_argument("--log-level", type=str, default="INFO")
 
         args = parser.parse_args(
-            ["--port", "6000", "--buffer-capacity", "1000", "--log-level", "DEBUG"]
+            ["--port", "6000", "--log-level", "DEBUG"]
         )
         assert args.port == 6000
-        assert args.buffer_capacity == 1000
         assert args.log_level == "DEBUG"
         assert args.output_dir == "data/raw"
         assert args.rotation_frames == 10000
