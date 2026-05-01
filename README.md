@@ -43,3 +43,6 @@ Dùng script để xem bản đồ nhiệt (Heatmap) từ dữ liệu đã thu t
 ```powershell
 python scripts/view_csi.py <tên_session_trong_data_raw>
 ```
+
+<img width="1911" height="1019" alt="image" src="https://github.com/user-attachments/assets/0320c389-4dfe-4cd8-aa64-12579f8128af" />
+
