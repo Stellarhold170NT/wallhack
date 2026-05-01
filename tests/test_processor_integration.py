@@ -152,6 +152,39 @@ class TestOfflineCLI:
             count = process_npy(input_path, output_path)
             assert count == 0
 
+    @pytest.mark.asyncio
+    async def test_subcarrier_count_change_resets_window(self):
+        """Subcarrier count change mid-stream resets window gracefully."""
+        input_q: asyncio.Queue = asyncio.Queue()
+        output_q: asyncio.Queue = asyncio.Queue()
+        processor = CsiProcessor(input_q, output_q)
+
+        # Push 150 frames with 64 subcarriers (not enough for window)
+        for i in range(150):
+            frame = make_frame(1, i, [float(i)] * 64)
+            await input_q.put(frame)
+
+        # Push 200 frames with 128 subcarriers (different count)
+        for i in range(200):
+            frame = make_frame(1, i + 150, [float(i)] * 128)
+            await input_q.put(frame)
+
+        task = asyncio.create_task(processor.run())
+        await asyncio.sleep(0.5)
+        processor.stop()
+        await task
+
+        vectors = []
+        while not output_q.empty():
+            vectors.append(output_q.get_nowait())
+
+        # Should get at least 1 vector from the 128-SC stream (200 frames → 1 window)
+        assert len(vectors) >= 1
+        for v in vectors:
+            assert v["node_id"] == 1
+            # Feature count = 128*2 + 2 = 258 for 128-SC frames
+            assert len(v["features"]) in {130, 258}
+
     def test_process_npy_invalid_shape(self):
         """1D input raises ValueError."""
         with tempfile.TemporaryDirectory() as tmpdir:

@@ -26,23 +26,48 @@ Thực hiện tương tự Node 1, thay đổi `--port COM6` và `--node-id 2`.
 
 ---
 
-## 3. Chạy Aggregator (Phase 2)
+## 3. Vận hành hệ thống (Phase 2 & 3)
 
-Mở terminal tại thư mục gốc và chạy bộ gom dữ liệu chuyên nghiệp:
+Hệ thống tích hợp sẵn bộ xử lý tín hiệu (Phase 3). Khi bạn chạy Aggregator, nó sẽ tự động phát hiện và kích hoạt `CsiProcessor` để lọc nhiễu và trích xuất đặc trưng trong thời gian thực.
+
+### Chạy trực tiếp (Real-time)
+Mở terminal tại thư mục gốc:
 ```powershell
-# Chạy bình thường
-python -m aggregator --port 5005 --output-dir data/raw
+# Chạy với log thông thường
+python -m aggregator --port 5005
 
-# Chạy chế độ Debug (xem chi tiết từng gói tin)
-python -m aggregator --port 5005 --log-level DEBUG
+# Xem chi tiết quá trình xử lý (Debug)
+python -m aggregator --port 5005 --log-level INFO
 ```
-*Ghi chú: Nhấn **Ctrl+C** để dừng và lưu dữ liệu vào file `.npy`.*
+*   **Dấu hiệu hoạt động:** Bạn sẽ thấy dòng `INFO aggregator: CsiProcessor wired into pipeline`.
+*   **Log đầu ra:** Hệ thống sẽ in log mỗi khi trích xuất xong một "Feature Vector".
 
-## 4. Xem dữ liệu (Visualizer)
+### Cấu hình nâng cao (Tùy chỉnh)
+Bạn có thể điều chỉnh tham số xử lý bằng JSON:
+```powershell
+python -m aggregator --processor-config '{"window_size": 200, "step_size": 100}'
+```
+
+---
+
+## 4. Công cụ hỗ trợ Phase 3
+
+### Xử lý Offline (Offline Processing)
+Bạn có thể chạy riêng bộ xử lý trên dữ liệu đã ghi lại:
+```powershell
+python -m processor --input data/raw/node_1_record.npy
+```
+
+### Kiểm tra thuật toán (Testing)
+Đảm bảo các bộ lọc (Hampel, Phase Unwrap) hoạt động chính xác:
+```powershell
+pytest tests/
+```
+
+## 5. Xem dữ liệu (Visualizer)
 Dùng script để xem bản đồ nhiệt (Heatmap) từ dữ liệu đã thu thập:
 ```powershell
 python scripts/view_csi.py <tên_session_trong_data_raw>
 ```
 
 <img width="1911" height="1019" alt="image" src="https://github.com/user-attachments/assets/0320c389-4dfe-4cd8-aa64-12579f8128af" />
-

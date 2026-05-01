@@ -19,7 +19,6 @@ logger = logging.getLogger(__name__)
 DEFAULT_CONFIG = {
     "window_size": 200,
     "step_size": 100,
-    "n_subcarriers": 64,
     "sample_rate": 50.0,
     "hampel_window": 7,
     "hampel_threshold": 3.0,
@@ -65,6 +64,8 @@ class CsiProcessor:
     def process_frame(self, frame: CSIFrame) -> dict | None:
         """Process a single frame and return feature dict if window ready."""
         node_id = frame.node_id
+        n_subcarriers = frame.n_subcarriers
+
         if node_id not in self._windows:
             if len(self._windows) >= self._max_nodes:
                 logger.warning(
@@ -74,12 +75,28 @@ class CsiProcessor:
                 )
                 return None
             self._windows[node_id] = SlidingWindow(
-                n_subcarriers=self.config["n_subcarriers"],
+                n_subcarriers=n_subcarriers,
                 window_size=self.config["window_size"],
                 step_size=self.config["step_size"],
             )
 
         sw = self._windows[node_id]
+
+        # Handle subcarrier count changes mid-stream: reset window if count differs
+        if sw.n_subcarriers != n_subcarriers:
+            logger.warning(
+                "Node %d subcarrier count changed %d → %d — resetting window",
+                node_id,
+                sw.n_subcarriers,
+                n_subcarriers,
+            )
+            self._windows[node_id] = SlidingWindow(
+                n_subcarriers=n_subcarriers,
+                window_size=self.config["window_size"],
+                step_size=self.config["step_size"],
+            )
+            sw = self._windows[node_id]
+
         amp_window = sw.push(frame)
         if amp_window is None:
             return None
@@ -89,7 +106,7 @@ class CsiProcessor:
 
         # Optional phase processing for presence detection
         phase_window = None
-        if frame.phases and len(frame.phases) == self.config["n_subcarriers"]:
+        if frame.phases and len(frame.phases) == n_subcarriers:
             phases = np.asarray(frame.phases, dtype=np.float64)
             # Phase window requires historical data; use current frame only
             # for now. Full phase windowing needs phase collection per node.
@@ -102,7 +119,7 @@ class CsiProcessor:
             sample_rate=self.config["sample_rate"],
         )
 
-        # Flatten to 1D array: mean_amp[64] + var_amp[64] + motion + breathing
+        # Flatten to 1D array: mean_amp[N] + var_amp[N] + motion + breathing
         flat = np.concatenate([
             features["mean_amp"],
             features["var_amp"],

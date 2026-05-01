@@ -113,6 +113,15 @@ void csi_collector_init(void)
         ESP_LOGW(TAG, "set_promiscuous failed: %s", esp_err_to_name(err));
     }
 
+    /*
+     * CSI LTF configuration determines subcarrier count per frame:
+     *   lltf_en=true           → 64 subcarriers (legacy, always present)
+     *   + htltf_en=true        → +64 subcarriers (HT-LTF, 802.11n)
+     *   + stbc_htltf2_en=true  → +64 subcarriers (STBC 2nd stream)
+     * Actual count varies per received packet type (64/128/192).
+     * Python processor now handles all counts dynamically.
+     * For consistent 64-SC frames, set htltf_en=false, stbc_htltf2_en=false.
+     */
     wifi_csi_config_t csi_config = {
         .lltf_en = true,
         .htltf_en = true,
