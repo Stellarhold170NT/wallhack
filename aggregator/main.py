@@ -100,14 +100,22 @@ async def run_server(args: argparse.Namespace) -> None:
         classifier_config = {}
         if args.classifier_config:
             import json
+
             classifier_config = json.loads(args.classifier_config)
-        classifier = CsiClassifier(
-            input_queue=amplitude_queue,
-            output_queue=activity_queue,
-            model_path=classifier_config.get("model_path", "checkpoints/best_model.pth"),
-            scaler_path=classifier_config.get("scaler_path", "checkpoints/scaler.json"),
-            config=classifier_config,
-        )
+        try:
+            classifier = CsiClassifier(
+                input_queue=amplitude_queue,
+                output_queue=activity_queue,
+                model_path=classifier_config.get("model_path", "checkpoints/best_model.pth"),
+                scaler_path=classifier_config.get("scaler_path", "checkpoints/scaler.json"),
+                config=classifier_config,
+            )
+        except Exception as exc:
+            logger.warning(
+                "CsiClassifier initialization failed: %s. Activity recognition will be disabled.",
+                exc,
+            )
+            classifier = None
 
     consumer_task: asyncio.Task | None = None
     shutdown_event = asyncio.Event()
