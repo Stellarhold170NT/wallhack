@@ -111,6 +111,13 @@ Plans:
 
 **Depends on:** Phase 2
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Phase sanitization (unwrap, detrend) and Hampel outlier filter with tests
+- [ ] 03-02-PLAN.md — Sliding window buffer and feature extraction (mean, variance, band power)
+- [ ] 03-03-PLAN.md — Asyncio CsiProcessor task, per-node state, Queue wiring, offline CLI
+
 ---
 
 ### Phase 4: Presence & Intrusion
