@@ -2,6 +2,7 @@
 
 Starts the asyncio UDP server, writes .npy amplitude data to disk,
 and orchestrates the consumer loop that bridges server → writer.
+Optionally wires in the CsiProcessor for real-time signal processing.
 
 Usage:
     python -m aggregator --port 5005
@@ -18,11 +19,22 @@ from .persistence import NpyWriter
 logger = logging.getLogger("aggregator")
 
 
+def _load_processor() -> type | None:
+    """Import CsiProcessor if available, else return None."""
+    try:
+        from processor.main import CsiProcessor
+        return CsiProcessor
+    except ImportError as exc:
+        logger.warning("CsiProcessor not available: %s", exc)
+        return None
+
+
 async def run_server(args: argparse.Namespace) -> None:
-    queue: asyncio.Queue = asyncio.Queue()
+    raw_queue: asyncio.Queue = asyncio.Queue()
+    feature_queue: asyncio.Queue = asyncio.Queue()
     server = CsiUdpServer(
         port=args.port,
-        queue=queue,
+        queue=raw_queue,
         buffer_capacity=args.buffer_capacity,
     )
     writer = NpyWriter(
@@ -30,13 +42,27 @@ async def run_server(args: argparse.Namespace) -> None:
         rotation_frames=args.rotation_frames,
     )
 
+    CsiProcessor = _load_processor()
+    processor = None
+    processor_task = None
+    if CsiProcessor is not None:
+        config = {}
+        if args.processor_config:
+            import json
+            config = json.loads(args.processor_config)
+        processor = CsiProcessor(
+            input_queue=raw_queue,
+            output_queue=feature_queue,
+            config=config,
+        )
+
     consumer_task: asyncio.Task | None = None
     shutdown_event = asyncio.Event()
 
     async def consumer() -> None:
         try:
             while True:
-                frame = await queue.get()
+                frame = await raw_queue.get()
                 writer.write(frame)
         except asyncio.CancelledError:
             pass
@@ -46,6 +72,12 @@ async def run_server(args: argparse.Namespace) -> None:
             return
         shutdown_event.set()
         logger.info("Shutting down...")
+        if processor_task and not processor_task.done():
+            processor_task.cancel()
+            try:
+                await processor_task
+            except asyncio.CancelledError:
+                pass
         if consumer_task and not consumer_task.done():
             consumer_task.cancel()
             try:
@@ -74,6 +106,9 @@ async def run_server(args: argparse.Namespace) -> None:
     try:
         await server.start()
         consumer_task = asyncio.create_task(consumer())
+        if processor is not None:
+            processor_task = asyncio.create_task(processor.run())
+            logger.info("CsiProcessor wired into pipeline")
         logger.info("Aggregator running on UDP port %d", args.port)
         await shutdown_event.wait()
     finally:
@@ -104,6 +139,12 @@ def main() -> None:
         type=int,
         default=10000,
         help="Frames per .npy file before auto-rotation (default: 10000)",
+    )
+    parser.add_argument(
+        "--processor-config",
+        type=str,
+        default="",
+        help='JSON config dict for CsiProcessor (e.g., \'{"window_size":100}\')',
     )
     parser.add_argument(
         "--log-level",
