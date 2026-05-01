@@ -1,3 +1,6 @@
+<img width="2069" height="532" alt="image" src="https://github.com/user-attachments/assets/8385a583-feaf-4f11-a5a0-0ac12ad6640a" />
+
+
 # ESP32-S3 CSI Wallhack - Setup Guide
 
 Hướng dẫn thiết lập nhanh hệ thống thu thập dữ liệu CSI từ 2 Node ESP32-S3.
