@@ -29,9 +29,20 @@ def _load_processor() -> type | None:
         return None
 
 
+def _load_detector() -> type | None:
+    """Import CsiDetector if available, else return None."""
+    try:
+        from detector.main import CsiDetector
+        return CsiDetector
+    except ImportError as exc:
+        logger.warning("CsiDetector not available: %s", exc)
+        return None
+
+
 async def run_server(args: argparse.Namespace) -> None:
     raw_queue: asyncio.Queue = asyncio.Queue()
     feature_queue: asyncio.Queue = asyncio.Queue()
+    alert_queue: asyncio.Queue = asyncio.Queue(maxsize=100)
     server = CsiUdpServer(
         port=args.port,
         queue=raw_queue,
@@ -56,6 +67,21 @@ async def run_server(args: argparse.Namespace) -> None:
             config=config,
         )
 
+    CsiDetector = _load_detector()
+    detector = None
+    detector_task = None
+    if CsiDetector is not None:
+        detector_config = {}
+        if args.detector_config:
+            import json
+            detector_config = json.loads(args.detector_config)
+        detector = CsiDetector(
+            input_queue=feature_queue,
+            output_queue=alert_queue,
+            node_health_source=server.nodes,
+            config=detector_config,
+        )
+
     consumer_task: asyncio.Task | None = None
     shutdown_event = asyncio.Event()
 
@@ -72,6 +98,12 @@ async def run_server(args: argparse.Namespace) -> None:
             return
         shutdown_event.set()
         logger.info("Shutting down...")
+        if detector_task and not detector_task.done():
+            detector_task.cancel()
+            try:
+                await detector_task
+            except asyncio.CancelledError:
+                pass
         if processor_task and not processor_task.done():
             processor_task.cancel()
             try:
@@ -109,6 +141,9 @@ async def run_server(args: argparse.Namespace) -> None:
         if processor is not None:
             processor_task = asyncio.create_task(processor.run())
             logger.info("CsiProcessor wired into pipeline")
+        if detector is not None:
+            detector_task = asyncio.create_task(detector.run())
+            logger.info("CsiDetector wired into pipeline")
         logger.info("Aggregator running on UDP port %d", args.port)
         await shutdown_event.wait()
     finally:
@@ -145,6 +180,12 @@ def main() -> None:
         type=str,
         default="",
         help='JSON config dict for CsiProcessor (e.g., \'{"window_size":100}\')',
+    )
+    parser.add_argument(
+        "--detector-config",
+        type=str,
+        default="",
+        help='JSON config dict for CsiDetector (e.g., \'{"fusion_mode":"and"}\')',
     )
     parser.add_argument(
         "--log-level",

@@ -115,6 +115,24 @@ None at project start.
 - Bug fix applied: variable subcarrier counts (64/128/192) now handled via center-crop / symmetric pad instead of window reset (previously caused 100% frame drop)
 - Ready for Phase 4: Presence & Intrusion
 
+**2026-05-01 — Phase 4 Context Gathered**
+- Decisions captured:
+  - D-21: Adaptive baseline learning for empty-room noise floor
+  - D-22: Multi-feature detection (motion_energy + breathing_band combined)
+  - D-23: Per-node independent detector with separate baselines
+  - D-24: Hysteresis with asymmetric enter (2.5σ) / exit (1.5σ) thresholds
+  - D-25: 3 consecutive frames to confirm Occupied, 10s silence to return Empty
+  - D-26: 5-second alert cooldown per SEC-04
+  - D-27: Dual alert output — JSONL persistence + in-memory buffer
+  - D-28: Alert object structure with timestamp, node_id, confidence, status, type, trigger_feature
+  - D-29: Third Queue for Phase 6 handoff
+  - D-30: OR fusion default, configurable AND mode
+  - D-31: Auto-exclude stale nodes from fusion
+  - D-32: Single-node graceful degradation, zero-node reports "unknown"
+- Artifact: `.planning/phases/04-presence-intrusion/04-CONTEXT.md`
+- Artifact: `.planning/phases/04-presence-intrusion/04-DISCUSSION-LOG.md`
+- Ready for Phase 4 planning
+
 ---
 *State initialized: 2026-04-30*
 *Last updated: 2026-05-01 after Phase 3 execution + subcarrier adaptation bugfix*
