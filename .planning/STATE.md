@@ -2,15 +2,15 @@
 
 **Project:** ESP32-S3 CSI Wallhack
 **Milestone:** v1.0 — Basic Sensing Pipeline
-**Current Phase:** Phase 5 Context Gathered — Ready for planning
-**Last Updated:** 2026-05-01 (post-discuss-phase)
+**Current Phase:** Phase 5 Complete — Ready for Phase 6
+**Last Updated:** 2026-05-01 (post-execution)
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-30)
 
 **Core value:** Reliable presence detection and activity classification (7 classes: walking, running, sitting down, standing up, lying down, bending, falling) using 2 ESP32-S3 nodes — architecture supports multi-node scalability.
-**Current focus:** Phase 5 — Activity Recognition
+**Current focus:** Phase 6 — Dashboard & API
 
 ## Phase Status
 
@@ -20,7 +20,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-30)
 | 2: UDP Aggregator | ✓ Complete | SIG-01..SIG-02 | 2/2 |
 | 3: Signal Processing | ✓ Complete | SIG-03..SIG-06 | 4/4 |
 | 4: Presence & Intrusion | ✓ Complete | SEC-01..SEC-04 | 4/4 |
-| 5: Activity Recognition | 🟡 Context Ready | ACT-01..ACT-05 | 0/5 |
+| 5: Activity Recognition | ✓ Complete | ACT-01..ACT-05 | 5/5 |
 | 6: Dashboard & API | 🔴 Not started | UI-01..UI-05, API-01..API-02 | 0/7 |
 
 ## Blockers
@@ -165,4 +165,34 @@ None at project start.
 
 ---
 *State initialized: 2026-04-30*
-*Last updated: 2026-05-01 after Phase 3 execution + subcarrier adaptation bugfix*
+**2026-05-01 — Phase 5 Execution Complete**
+- Executed 3 waves via ULW mode:
+  - Wave 1: Model architecture (AttentionGRU) + dataset infrastructure
+  - Wave 2: Training pipeline + data collection + augmentation
+  - Wave 3: Real-time inference + aggregator wiring
+- Files created:
+  - `classifier/__init__.py` — Package init
+  - `classifier/model.py` — AttentionGRU (74,564 params, nn.GRU + additive attention)
+  - `classifier/dataset.py` — Esp32Dataset, ArilDataset, StandardScaler persistence
+  - `classifier/augment.py` — shift_augment (21×), noise_augment (4×), mixup_augment
+  - `classifier/train.py` — train_model, pretrain_aril, finetune_esp32, cross_validate, CLI
+  - `classifier/collect.py` — CsiCollector CLI data collection tool
+  - `classifier/infer.py` — CsiClassifier asyncio task for real-time inference
+  - `classifier/__main__.py` — Offline inference CLI
+  - `tests/test_classifier.py` — 20 tests (model + dataset)
+  - `tests/test_train.py` — 9 tests (training pipeline)
+  - `tests/test_collect.py` — 11 tests (data collection)
+  - `tests/test_infer.py` — 17 tests (inference task)
+  - `tests/test_classifier_integration.py` — 6 tests (E2E pipeline)
+- Tests: 153/153 passed (up from 90)
+- Decisions implemented: D-33..D-43 all covered
+- Artifacts: `.planning/phases/05-activity-recognition/05-0{1,2,3}-SUMMARY.md`
+- Ready for Phase 6: Dashboard & API
+
+**2026-05-01 — Bugfix: NodeBuffer dead code**
+- Removed dead NodeBuffer from aggregator pipeline (caused false drop warnings)
+- Server now pushes frames directly to queue without intermediate buffer
+- Tests: 90/90 passed after fix
+
+---
+*Last updated: 2026-05-01 after Phase 5 execution + NodeBuffer bugfix*

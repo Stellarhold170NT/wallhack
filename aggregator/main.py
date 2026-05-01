@@ -39,10 +39,22 @@ def _load_detector() -> type | None:
         return None
 
 
+def _load_classifier() -> type | None:
+    """Import CsiClassifier if available, else return None."""
+    try:
+        from classifier.infer import CsiClassifier
+        return CsiClassifier
+    except ImportError as exc:
+        logger.warning("CsiClassifier not available: %s", exc)
+        return None
+
+
 async def run_server(args: argparse.Namespace) -> None:
     raw_queue: asyncio.Queue = asyncio.Queue()
     feature_queue: asyncio.Queue = asyncio.Queue()
     alert_queue: asyncio.Queue = asyncio.Queue(maxsize=100)
+    amplitude_queue: asyncio.Queue = asyncio.Queue()
+    activity_queue: asyncio.Queue = asyncio.Queue(maxsize=100)
     server = CsiUdpServer(
         port=args.port,
         queue=raw_queue,
@@ -81,6 +93,22 @@ async def run_server(args: argparse.Namespace) -> None:
             config=detector_config,
         )
 
+    CsiClassifier = _load_classifier()
+    classifier = None
+    classifier_task = None
+    if CsiClassifier is not None:
+        classifier_config = {}
+        if args.classifier_config:
+            import json
+            classifier_config = json.loads(args.classifier_config)
+        classifier = CsiClassifier(
+            input_queue=amplitude_queue,
+            output_queue=activity_queue,
+            model_path=classifier_config.get("model_path", "checkpoints/best_model.pth"),
+            scaler_path=classifier_config.get("scaler_path", "checkpoints/scaler.json"),
+            config=classifier_config,
+        )
+
     consumer_task: asyncio.Task | None = None
     shutdown_event = asyncio.Event()
 
@@ -89,6 +117,7 @@ async def run_server(args: argparse.Namespace) -> None:
             while True:
                 frame = await raw_queue.get()
                 writer.write(frame)
+                amplitude_queue.put_nowait(frame)
         except asyncio.CancelledError:
             pass
 
@@ -97,6 +126,12 @@ async def run_server(args: argparse.Namespace) -> None:
             return
         shutdown_event.set()
         logger.info("Shutting down...")
+        if classifier_task and not classifier_task.done():
+            classifier_task.cancel()
+            try:
+                await classifier_task
+            except asyncio.CancelledError:
+                pass
         if detector_task and not detector_task.done():
             detector_task.cancel()
             try:
@@ -143,6 +178,9 @@ async def run_server(args: argparse.Namespace) -> None:
         if detector is not None:
             detector_task = asyncio.create_task(detector.run())
             logger.info("CsiDetector wired into pipeline")
+        if classifier is not None:
+            classifier_task = asyncio.create_task(classifier.run())
+            logger.info("CsiClassifier wired into pipeline")
         logger.info("Aggregator running on UDP port %d", args.port)
         await shutdown_event.wait()
     finally:
@@ -151,7 +189,8 @@ async def run_server(args: argparse.Namespace) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="CSI UDP Aggregator — receives CSI frames from ESP32-S3 nodes"
+        description="CSI UDP Aggregator — receives CSI frames from ESP32-S3 nodes, "
+        "with optional signal processing, presence detection, and activity classification"
     )
     parser.add_argument(
         "--port", type=int, default=5005, help="UDP port to listen on (default: 5005)"
@@ -179,6 +218,12 @@ def main() -> None:
         type=str,
         default="",
         help='JSON config dict for CsiDetector (e.g., \'{"fusion_mode":"and"}\')',
+    )
+    parser.add_argument(
+        "--classifier-config",
+        type=str,
+        default="",
+        help='JSON config dict for CsiClassifier (e.g., \'{"model_path":"checkpoints/best.pth","scaler_path":"checkpoints/scaler.json"}\')',
     )
     parser.add_argument(
         "--log-level",
