@@ -8,7 +8,7 @@
 | File | Purpose |
 |------|---------|
 | `classifier/augment.py` | Data augmentation: shift (21×), noise (4×), MixUp, augment_dataset |
-| `classifier/train.py` | Training loop, early stopping, ARIL pre-training, ESP32 fine-tuning, 5-fold CV, checkpoint save/load, CLI |
+| `classifier/train.py` | Training loop, early stopping, HAR pre-training, ESP32 fine-tuning, 5-fold CV, checkpoint save/load, CLI |
 | `classifier/collect.py` | CLI tool for recording labeled CSI activity data via UDP |
 | `tests/test_train.py` | 9 tests covering convergence, early stopping, checkpoint I/O, cross-validation, output shapes, CLI |
 | `tests/test_collect.py` | 11 tests covering init, label validation, file naming, metadata JSON, CLI |
@@ -33,7 +33,7 @@ $env:PYTHONPATH="."; python -m pytest tests/test_train.py tests/test_collect.py 
 - Early stopping: triggers with patience=2 ✓
 - Checkpoint save/load roundtrip: weights match ✓
 - Cross-validation: 2 folds produce valid accuracies ✓
-- ARIL 6-class: model.fc.out_features == 6 ✓
+- HAR 5-class: model.fc.out_features == 5 ✓
 - ESP32 4-class: model.fc.out_features == 4 ✓
 - CLI train --help: shows all expected args ✓
 - CLI collect --help: shows all expected args ✓
@@ -44,8 +44,8 @@ $env:PYTHONPATH="."; python -m pytest tests/test_train.py tests/test_collect.py 
 
 ## Key Decisions Implemented
 
-- **D-33:** ARIL pre-train (6-class) + ESP32 fine-tune (4-class) via `pretrain_aril()` / `finetune_esp32()`
+- **D-33:** HAR pre-train (5-class) + ESP32 fine-tune (4-class) via `pretrain_har()` / `finetune_esp32()`
 - **D-37:** 50-frame windows with 25-frame step in collect.py sliding window
 - **D-40:** `python -m classifier.collect --label walking --duration 30 --output data/activities/`
-- **D-41:** Pre-training on all 6 ARIL classes
+- **D-41:** Pre-training on all 5 HAR classes
 - **D-43:** Offline training with shift+noise augmentation, 20% validation split, early stopping (patience=10), 5-fold CV

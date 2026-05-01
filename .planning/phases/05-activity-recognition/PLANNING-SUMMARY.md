@@ -32,7 +32,7 @@
 ### Decision Traceability
 
 All locked decisions from 05-CONTEXT.md are covered:
-- **D-33** Hybrid data (ARIL + ESP32) → Plan 02
+- **D-33** Hybrid data (HAR + ESP32) → Plan 02
 - **D-34** Raw amplitude + StandardScaler → Plan 01
 - **D-35** 4 classes (walk, run, lie, bend) → Plan 01
 - **D-36** Center-crop to 52 subcarriers → Plan 01, Plan 03
@@ -40,7 +40,7 @@ All locked decisions from 05-CONTEXT.md are covered:
 - **D-38** classifier/ package → All plans
 - **D-39** Fork after server → Plan 03
 - **D-40** CLI collect tool → Plan 02
-- **D-41** ARIL pre-training → Plan 02
+- **D-41** HAR pre-training → Plan 02
 - **D-42** nn.GRU + attention, hidden=128 → Plan 01
 - **D-43** Offline training with augmentation → Plan 02
 

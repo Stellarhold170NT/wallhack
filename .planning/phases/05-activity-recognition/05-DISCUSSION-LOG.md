@@ -6,14 +6,14 @@
 **Date:** 2026-05-01
 **Phase:** 05-activity-recognition
 **Mode:** default (interactive)
-**Areas discussed:** Data Strategy, Input Format, Class Scope, Subcarrier Count, Window Size, Project Structure, Inference Integration, Data Collection, ARIL Mapping, Model Architecture
+**Areas discussed:** Data Strategy, Input Format, Class Scope, Subcarrier Count, Window Size, Project Structure, Inference Integration, Data Collection, HAR Mapping, Model Architecture
 
 ## Discussion Summary
 
 ### Data Strategy
 - **Question:** How to get labeled training data? Paper datasets are placeholders.
-- **Options:** Collect real ESP32-S3 data / Download ARIL + adapt / Hybrid pre-train + fine-tune
-- **Selected:** Hybrid: ARIL pre-train + ESP32 fine-tune
+- **Options:** Collect real ESP32-S3 data / Download HAR + adapt / Hybrid pre-train + fine-tune
+- **Selected:** Hybrid: HAR pre-train + ESP32 fine-tune
 - **Rationale:** Balances speed (don't need 1400 manual samples) with accuracy (domain-adapted to ESP32-S3 environment)
 
 ### Input Format
@@ -30,9 +30,9 @@
 
 ### Subcarrier Count
 - **Question:** How to standardize 64/128/192 subcarriers from ESP32-S3?
-- **Options:** Crop to 52 (ARIL) / 64 (ESP32 default) / Dynamic
-- **Selected:** Center-crop to 52 (ARIL-compatible)
-- **Rationale:** Enables direct ARIL pre-training weight transfer. Core subcarriers preserved.
+- **Options:** Crop to 52 (HAR) / 64 (ESP32 default) / Dynamic
+- **Selected:** Center-crop to 52 (HAR-compatible)
+- **Rationale:** Enables direct HAR pre-training weight transfer. Core subcarriers preserved.
 
 ### Window Size
 - **Question:** Window size for 10 fps ESP32-S3? Paper uses 200 frames @ 50 Hz.
@@ -58,10 +58,10 @@
 - **Selected:** CLI tool: `python -m classifier.collect --label walking --duration 30`
 - **Rationale:** Simple, scriptable, easy to use in home environment.
 
-### ARIL Mapping
-- **Question:** ARIL has 6 classes, we need 4. How to map for pre-training?
-- **Options:** 3 matching classes only / Map stand/sit→bend / Generic pre-training
-- **Selected:** Generic pre-training on all 6 ARIL classes
+### HAR Mapping
+- **Question:** HAR has 5 classes, we need 4. How to map for pre-training?
+- **Options:** 4 matching classes only / Map stand/sit→bend / Generic pre-training
+- **Selected:** Generic pre-training on all 5 HAR classes
 - **Rationale:** Learn general CSI motion patterns, not exact label mapping. Fine-tune with correct 4-class labels.
 
 ### Model Architecture

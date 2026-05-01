@@ -43,7 +43,7 @@ class TestCsiCollectorInit:
             CsiCollector(label="jumping", duration=30)
 
     def test_all_valid_labels_accepted(self):
-        for label in ["walking", "running", "lying", "bending"]:
+        for label in ["walking", "running", "lying", "bending", "falling", "sitting", "standing"]:
             collector = CsiCollector(label=label, duration=10)
             assert collector.label == label
 

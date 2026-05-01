@@ -24,3 +24,14 @@ Thumbs.db
 build/
 dist/
 *.egg-info/
+
+# Datasets and Large Files
+llm-wiki/raw/HAR/
+data/activities/
+models/*.pth
+models/*.onnx
+models/scaler.json
+
+# Logs and local artifacts
+logs/
+*.log

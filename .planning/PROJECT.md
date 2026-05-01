@@ -39,9 +39,9 @@ Reliable presence detection and activity classification (7 classes: walking / ru
 - **Reference projects**:
   - RuView (Rust, ~21k LOC, 65 WASM modules — too heavy for 2-node hobby setup)
   - Wallhack1.8k (PyTorch dataloader, 3-class ResNet18)
-  - **Kang et al. 2025** (GRU+Attention, 57.8K params, 98.92% on ARIL — **source code analyzed and confirmed runnable**)
+  - **Kang et al. 2025** (GRU+Attention, 57.8K params, 98.92% on ARIL in paper — **source code analyzed and confirmed runnable**; we use HAR dataset for pre-training)
 - **CSI format**: ESP-IDF `wifi_csi_info_t`, 52-56 subcarriers, I/Q pairs, 20-100 Hz sampling
-- **Model input**: `(batch, time_steps, 52)` amplitude matrix — directly compatible with ARIL dataset format
+- **Model input**: `(batch, time_steps, 52)` amplitude matrix — directly compatible with HAR dataset format
 
 ## Constraints
 

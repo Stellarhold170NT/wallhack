@@ -148,15 +148,15 @@ None at project start.
 
 **2026-05-01 — Phase 5 Context Gathered**
 - Decisions captured:
-  - D-33: Hybrid data — ARIL pre-train + ESP32 fine-tune
+  - D-33: Hybrid data — HAR pre-train + ESP32 fine-tune
   - D-34: Raw amplitude windows + StandardScaler (like paper)
   - D-35: 4 static classes for v1 (walk, run, lie, bend)
-  - D-36: Center-crop to 52 subcarriers (ARIL-compatible)
+  - D-36: Center-crop to 52 subcarriers (HAR-compatible)
   - D-37: 50-frame windows (~5s @ 10 fps)
   - D-38: `classifier/` package structure
   - D-39: Fork after server — parallel inference with presence detector
   - D-40: CLI data collection tool `classifier.collect`
-  - D-41: Generic ARIL pre-training on all 6 classes
+  - D-41: Generic HAR pre-training on all 5 classes
   - D-42: nn.GRU + attention, hidden=128, skip pruning
   - D-43: Offline training with augmentation + early stopping
 - Artifact: `.planning/phases/05-activity-recognition/05-CONTEXT.md`

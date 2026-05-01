@@ -113,8 +113,8 @@ class TestCrossValidate:
 
 
 class TestOutputShapes:
-    def test_pretrain_aril_produces_6class(self):
-        from classifier.train import pretrain_aril
+    def test_pretrain_har_produces_6class(self):
+        from classifier.train import pretrain_har
         import warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
@@ -133,7 +133,7 @@ class TestOutputShapes:
             assert model.fc.out_features == 6
             assert "best_val_acc" in hist
 
-    def test_finetune_produces_4class(self):
+    def test_finetune_produces_7class(self):
         from classifier.train import finetune_esp32
         import warnings
         with warnings.catch_warnings():
@@ -141,7 +141,7 @@ class TestOutputShapes:
 
             with tempfile.TemporaryDirectory() as tmp:
                 root = pathlib.Path(tmp)
-                for label in ["walking", "running", "lying", "bending"]:
+                for label in ["walking", "running", "lying", "bending", "falling", "sitting", "standing"]:
                     (root / label).mkdir()
                     data = rng.standard_normal((3, 50, 52)).astype(np.float32)
                     np.save(root / label / "a.npy", data)
@@ -152,7 +152,7 @@ class TestOutputShapes:
                     model, str(tmp), device,
                     config={"epochs": 2, "augment": False, "batch_size": 4, "hidden_dim": 32, "attention_dim": 8},
                 )
-                assert model.fc.out_features == 4
+                assert model.fc.out_features == 7
                 assert "best_val_acc" in hist
 
 
@@ -165,5 +165,5 @@ class TestCLI:
         )
         assert result.returncode == 0
         assert "--data-dir" in result.stdout
-        assert "--aril-dir" in result.stdout
+        assert "--har-dir" in result.stdout
         assert "--cross-validate" in result.stdout

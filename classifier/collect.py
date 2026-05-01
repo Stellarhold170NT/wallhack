@@ -28,7 +28,7 @@ from aggregator.parser import parse_frame
 
 logger = logging.getLogger(__name__)
 
-VALID_LABELS = {"walking", "running", "lying", "bending"}
+VALID_LABELS = {"walking", "running", "lying", "bending", "falling", "sitting", "standing"}
 WINDOW_SIZE = 50
 WINDOW_STEP = 25
 
@@ -37,7 +37,7 @@ class CsiCollector:
     """Records CSI amplitude windows from UDP streams for a labeled activity.
 
     Args:
-        label: Activity label (walking, running, lying, bending).
+        label: Activity label (walking, running, lying, bending, falling, sitting, standing).
         duration: Recording duration in seconds.
         output_dir: Root directory for saved .npy + .json files.
         port: UDP port to bind (default 5005).
@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--label", required=True,
-        help="Activity label (walking, running, lying, bending)",
+        help="Activity label (walking, running, lying, bending, falling, sitting, standing)",
     )
     parser.add_argument(
         "--duration", type=float, default=30.0,

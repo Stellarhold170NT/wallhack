@@ -106,9 +106,9 @@ Plans:
 **Canonical refs:**
 - `llm-wiki/raw/RuView/docs/adr/ADR-014-sota-signal-processing.md` — algorithms
 - `llm-wiki/raw/wallhack1.8k/datasets.py` — amplitude extraction pattern
-- `llm-wiki/raw/prunedAttentionGRU/ARIL/aril.py` — StandardScaler normalization proven sufficient for HAR
+- `llm-wiki/raw/prunedAttentionGRU/HAR/har.py` — StandardScaler normalization proven sufficient for HAR
 
-**Note:** Activity Recognition does NOT require phase unwrap, Hampel, or spectrogram. Raw amplitude + StandardScaler achieves 98.92% (ARIL). Advanced DSP is only required for presence/intrusion detection robustness.
+**Note:** Activity Recognition does NOT require phase unwrap, Hampel, or spectrogram. Raw amplitude + StandardScaler achieves 98.92% on ARIL in the reference paper; we use the HAR dataset for pre-training. Advanced DSP is only required for presence/intrusion detection robustness.
 
 **Depends on:** Phase 2
 
@@ -172,13 +172,13 @@ Plans:
 - `llm-wiki/raw/prunedAttentionGRU/PrunedAttentionGRU.py` — model architecture (78 lines)
 - `llm-wiki/raw/prunedAttentionGRU/train.py` — training loop with MixUp
 - `llm-wiki/raw/prunedAttentionGRU/augmentation.py` — shifting + noise augmentation
-- `llm-wiki/raw/prunedAttentionGRU/ARIL/aril.py` — 52-subcarrier input format
+- `llm-wiki/raw/prunedAttentionGRU/HAR/har.py` — 52-subcarrier input format
 - `llm-wiki/raw/prunedAttentionGRU/HAR/har.py` — 4-class dataset loader reference
 
 **Adaptation notes:**
 - Replace `CustomGRU` (slow hand-written loop) with `nn.GRU` (10× speedup, cuDNN optimized)
 - Skip pruning code — unnecessary for our scale (v1). Architecture supports 8-276 classes natively for multi-node expansion.
-- Center-crop to 52 subcarriers for ARIL compatibility
+- Center-crop to 52 subcarriers for HAR compatibility
 - 50-frame windows (~5s at 10 fps)
 - Add validation split + early stopping (missing from original code)
 
@@ -187,8 +187,8 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Model architecture (AttentionGRU) + dataset infrastructure (ESP32 + ARIL loaders + StandardScaler)
-- [ ] 05-02-PLAN.md — Training pipeline (augmentation + ARIL pre-train + ESP32 fine-tune + cross-validation) + CLI data collection tool
+- [ ] 05-01-PLAN.md — Model architecture (AttentionGRU) + dataset infrastructure (ESP32 + HAR loaders + StandardScaler)
+- [ ] 05-02-PLAN.md — Training pipeline (augmentation + HAR pre-train + ESP32 fine-tune + cross-validation) + CLI data collection tool
 - [ ] 05-03-PLAN.md — Real-time inference (CsiClassifier asyncio task) + aggregator wiring + offline inference CLI
 
 ---

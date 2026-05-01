@@ -1,6 +1,6 @@
 """Training pipeline with early stopping, validation, and cross-validation.
 
-Supports ARIL pre-training and ESP32-S3 fine-tuning per the hybrid
+Supports HAR pre-training and ESP32-S3 fine-tuning per the hybrid
 data strategy (D-33), with MixUp batch augmentation inside the
 training loop (D-43).
 
@@ -24,7 +24,7 @@ from torch.utils.data import DataLoader, Dataset, random_split, Subset, TensorDa
 from .augment import mixup_augment
 from .model import AttentionGRU
 from .dataset import (
-    ArilDataset,
+    HarDataset,
     Esp32Dataset,
     fit_scaler,
     load_scaler,
@@ -44,7 +44,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "mixup_alpha": 1.0,
     "val_split": 0.2,
     "n_splits": 5,
-    "num_classes": 4,
+    "num_classes": 7,
     "input_dim": 52,
     "timesteps": 50,
     "hidden_dim": 128,
@@ -106,7 +106,7 @@ def train_model(
                 X_np = inputs.cpu().numpy()
                 y_np = labels.cpu().numpy()
                 X_mix, y_mix = mixup_augment(
-                    X_np, y_np, alpha=cfg["mixup_alpha"], prob=cfg["mixup_prob"]
+                    X_np, y_np, alpha=cfg["mixup_alpha"], prob=1.0
                 )
                 inputs = torch.from_numpy(X_mix.astype(np.float32)).to(device)
                 targets = torch.from_numpy(y_mix.astype(np.float32)).to(device)
@@ -170,12 +170,16 @@ def train_model(
             epoch + 1, train_loss, train_acc, val_loss_avg, val_acc,
         )
 
+        improved = False
         if val_acc > best_acc:
             best_acc = val_acc
             best_model_wts = copy.deepcopy(model.state_dict())
-            patience_counter = 0
-        elif val_loss_avg < best_loss:
+            improved = True
+        if val_loss_avg < best_loss:
             best_loss = val_loss_avg
+            improved = True
+
+        if improved:
             patience_counter = 0
         else:
             patience_counter += 1
@@ -191,22 +195,22 @@ def train_model(
     return model, history
 
 
-def pretrain_aril(
-    aril_root: str,
+def pretrain_har(
+    har_root: str,
     device: torch.device,
     config: dict[str, Any] | None = None,
 ) -> tuple[nn.Module, dict[str, Any]]:
-    """Pre-train on all 6 ARIL classes (D-41).
+    """Pre-train on all 6 HAR classes (D-41).
 
     Returns (model_with_6class_head, history).
     """
     cfg = {**DEFAULT_CONFIG, **(config or {})}
 
-    train_ds = ArilDataset(aril_root, split="train")
+    train_ds = HarDataset(har_root, split="train")
     scaler = fit_scaler(train_ds)
     train_ds.scaler = scaler
 
-    val_ds = ArilDataset(aril_root, split="test")
+    val_ds = HarDataset(har_root, split="test")
     val_ds.scaler = scaler
 
     train_loader = DataLoader(train_ds, batch_size=cfg["batch_size"], shuffle=True)
@@ -232,9 +236,9 @@ def finetune_esp32(
     device: torch.device,
     config: dict[str, Any] | None = None,
 ) -> tuple[nn.Module, dict[str, Any]]:
-    """Fine-tune on ESP32 data with 4-class output (D-35).
+    """Fine-tune on ESP32 data with 7-class output (D-35).
 
-    Replaces the final FC layer with a 4-class head, applies
+    Replaces the final FC layer with a 7-class head, applies
     augmentation, and trains.
 
     Returns (fine_tuned_model, history).
@@ -428,8 +432,8 @@ def main(argv: list[str] | None = None) -> None:
         help="ESP32-S3 dataset directory (data/activities/)",
     )
     parser.add_argument(
-        "--aril-dir",
-        help="ARIL dataset directory for pre-training",
+        "--har-dir",
+        help="HAR dataset directory for pre-training",
     )
     parser.add_argument(
         "--output-dir",
@@ -500,26 +504,31 @@ def main(argv: list[str] | None = None) -> None:
         return
 
     model = None
+    history: dict[str, Any] = {}
 
-    if args.aril_dir:
-        logger.info("=== ARIL pre-training ===")
-        model, hist = pretrain_aril(args.aril_dir, device, cfg)
+    if args.har_dir:
+        logger.info("=== HAR pre-training ===")
+        model, hist = pretrain_har(args.har_dir, device, cfg)
+        history["pretrain"] = hist
         logger.info(
-            "ARIL pre-training done — best acc: %.2f%%",
+            "HAR pre-training done — best acc: %.2f%%",
             hist["best_val_acc"],
         )
         save_checkpoint(
             model,
-            str(output_dir / "pretrain_aril.pth"),
-            config={"history": hist, **cfg},
+            str(output_dir / "pretrain_har.pth"),
+            scaler=fit_scaler(HarDataset(args.har_dir, split="train")),
+            config=cfg,
         )
+        logger.info("Pre-train checkpoint saved to %s", output_dir / "pretrain_har.pth")
 
+    # Fine-tune on ESP32 data
     if args.data_dir:
         if model is None:
             model = AttentionGRU(52, 128, 32, output_dim=6).to(device)
 
         logger.info("=== ESP32 fine-tuning ===")
-        model, hist = finetune_esp32(model, args.data_dir, device, {**cfg, "num_classes": 4})
+        model, hist = finetune_esp32(model, args.data_dir, device, {**cfg, "num_classes": 7})
 
         scaler_path = output_dir / "activity_scaler.json"
         ds = Esp32Dataset(args.data_dir)
@@ -533,8 +542,8 @@ def main(argv: list[str] | None = None) -> None:
         logger.info("Fine-tuned model saved to %s", checkpoint_path)
         logger.info("Best val acc: %.2f%%", hist["best_val_acc"])
 
-    if not args.data_dir and not args.aril_dir:
-        parser.error("At least --data-dir or --aril-dir required")
+    if not args.data_dir and not args.har_dir:
+        parser.error("At least --data-dir or --har-dir required")
 
 
 if __name__ == "__main__":

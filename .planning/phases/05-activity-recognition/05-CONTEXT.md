@@ -22,10 +22,10 @@ Train and deploy a 4-class activity classifier using proven Attention-GRU archit
 ## Implementation Decisions
 
 ### Data Strategy
-- **D-33:** Hybrid data approach — ARIL pre-train + ESP32 fine-tune
-  - Download ARIL dataset (~1000 samples, 6 classes) for pre-training
+- **D-33:** Hybrid data approach — HAR pre-train + ESP32 fine-tune
+  - Download HAR dataset (~1000 samples, 6 classes) for pre-training
   - Collect ~50-100 samples per class from ESP32-S3 for fine-tuning
-  - ARIL provides generic motion feature learning; ESP32 data adapts to target environment
+  - HAR provides generic motion feature learning; ESP32 data adapts to target environment
   - Balances speed (don't need 1400 manual samples) with accuracy (domain-adapted)
 
 ### Input Format & Preprocessing
@@ -43,10 +43,10 @@ Train and deploy a 4-class activity classifier using proven Attention-GRU archit
   - Architecture supports 8-276 classes natively for future expansion
 
 ### Model Input Dimensions
-- **D-36:** Center-crop subcarriers to 52 (ARIL-compatible)
-  - ESP32-S3 sends 64/128/192 subcarriers; crop center 52 to match ARIL format
+- **D-36:** Center-crop subcarriers to 52 (HAR-compatible)
+  - ESP32-S3 sends 64/128/192 subcarriers; crop center 52 to match HAR format
   - Core subcarriers preserved; edge subcarriers (often noisy) discarded
-  - Enables direct ARIL pre-training weight transfer
+  - Enables direct HAR pre-training weight transfer
 
 ### Window Size
 - **D-37:** 50-frame windows (~5 seconds at 10 fps)
@@ -58,7 +58,7 @@ Train and deploy a 4-class activity classifier using proven Attention-GRU archit
 - **D-38:** `classifier/` package with dedicated modules
   - `classifier/train.py` — training loop with early stopping, validation split
   - `classifier/infer.py` — real-time inference task (asyncio-friendly)
-  - `classifier/dataset.py` — ESP32 dataset loader + ARIL adapter
+  - `classifier/dataset.py` — ESP32 dataset loader + HAR adapter
   - `classifier/collect.py` — CLI data collection tool
   - `classifier/model.py` — Attention-GRU architecture (nn.GRU + attention)
 
@@ -78,9 +78,9 @@ Train and deploy a 4-class activity classifier using proven Attention-GRU archit
   - Metadata JSON sidecar: label, duration, node_id, subcarrier_count, sample_count
   - Later converted to training dataset via `classifier/dataset.py`
 
-### ARIL Pre-training Strategy
-- **D-41:** Generic pre-training on all 6 ARIL classes
-  - Use all ARIL classes (walk, stand, sit, lie, run, clean) for pre-training
+### HAR Pre-training Strategy
+- **D-41:** Generic pre-training on all 6 HAR classes
+  - Use all HAR classes (walk, stand, sit, lie, run, clean) for pre-training
   - Goal: learn general CSI motion patterns, not exact label mapping
   - Fine-tune on ESP32-S3 data with correct 4-class labels
   - Transfer learning: first layer features transfer, final FC layer retrained
@@ -102,7 +102,7 @@ Train and deploy a 4-class activity classifier using proven Attention-GRU archit
   - 5-fold cross-validation for final accuracy report
 
 ### the agent's Discretion
-- Exact ARIL download and parsing implementation
+- Exact HAR download and parsing implementation
 - Scaler persistence format (pickle, JSON, or numpy)
 - Activity Queue format and bounded size
 - Whether to include confidence thresholding (emit "unknown" if max confidence < 0.5)
@@ -114,7 +114,7 @@ Train and deploy a 4-class activity classifier using proven Attention-GRU archit
 <specifics>
 ## Specific Ideas
 
-- "Dùng ARIL để pre-train rồi fine-tune trên ESP32-S3 của mình — nhanh hơn thu thập 1400 mẫu" — hybrid data strategy
+- "Dùng HAR để pre-train rồi fine-tune trên ESP32-S3 của mình — nhanh hơn thu thập 1400 mẫu" — hybrid data strategy
 - "Raw amplitude + StandardScaler là đủ, paper đạt 98.92% không cần DSP phức tạp" — keep preprocessing simple
 - "4 class tĩnh trước, transitions và falling sau" — phased class rollout
 - "Fork sau server để classifier chạy song song detector, không làm chậm pipeline" — parallel inference
@@ -132,9 +132,9 @@ Train and deploy a 4-class activity classifier using proven Attention-GRU archit
 - `llm-wiki/raw/prunedAttentionGRU/augmentation.py` — np.roll shift + noise augmentation
 
 ### Dataset Reference
-- `llm-wiki/raw/prunedAttentionGRU/ARIL/aril.py` — ARIL dataset loader (52 subcarriers)
+- `llm-wiki/raw/prunedAttentionGRU/HAR/har.py` — HAR dataset loader (52 subcarriers)
 - `llm-wiki/raw/prunedAttentionGRU/premodel.py` — Dataset selection and loader setup
-- ARIL download: https://github.com/geekfeiw/ARIL
+- HAR download: https://ieee-dataport.org/open-access/csi-human-activity
 
 ### Existing Pipeline
 - `aggregator/server.py` — UDP server, NodeBuffer, frame distribution
@@ -183,7 +183,7 @@ Train and deploy a 4-class activity classifier using proven Attention-GRU archit
 - **On-device inference (ESP32-S3)** — v2; model is 328KB, SRAM is 520KB, theoretically feasible but requires C port
 - **Multi-node activity fusion** — v2; fuse activity labels from 2 nodes for spatial coverage
 - **Auto-labeling via presence detector** — future; use Phase 4 to auto-segment active periods for labeling
-- **Cross-dataset evaluation (StanFi, HAR, SignFi)** — research extension; focus on ARIL + ESP32 for v1
+- **Cross-dataset evaluation (StanFi, SignFi)** — research extension; focus on HAR + ESP32 for v1
 
 </deferred>
 

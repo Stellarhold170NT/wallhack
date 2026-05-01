@@ -8,6 +8,7 @@ import torch
 from classifier.model import AttentionGRU, count_parameters
 from classifier.dataset import (
     Esp32Dataset,
+    HarDataset,
     fit_scaler,
     save_scaler,
     load_scaler,
@@ -80,13 +81,13 @@ class TestEsp32Dataset:
     def test_dataset_loads(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            for label_dir in ["walking", "running", "lying", "bending"]:
+            for label_dir in ["walking", "running", "lying", "bending", "falling", "sitting", "standing"]:
                 (root / label_dir).mkdir()
                 _make_synthetic_npy(
                     root / label_dir / "a.npy", samples=5, timesteps=50, subcarriers=52
                 )
             ds = Esp32Dataset(str(root))
-            assert len(ds) == 20
+            assert len(ds) == 35
             x, y = ds[0]
             assert x.shape == (50, 52)
             assert y.item() == 0  # walking
@@ -169,19 +170,73 @@ class TestEsp32Dataset:
     def test_dataset_label_mapping(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            for label, idx in [("walking", 0), ("running", 1), ("lying", 2), ("bending", 3)]:
+            for label, idx in [("walking", 0), ("running", 1), ("lying", 2), ("bending", 3), ("falling", 4), ("sitting", 5), ("standing", 6)]:
                 (root / label).mkdir()
                 _make_synthetic_npy(
                     root / label / "a.npy", samples=2, timesteps=50, subcarriers=52
                 )
             ds = Esp32Dataset(str(root))
             labels = {int(ds[i][1]) for i in range(len(ds))}
-            assert labels == {0, 1, 2, 3}
+            assert labels == {0, 1, 2, 3, 4, 5, 6}
 
 
 # ---------------------------------------------------------------------------
 # Scaler persistence tests
 # ---------------------------------------------------------------------------
+
+class TestHarDataset:
+    def test_har_dataset_loads(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for activity in ["Empty", "Lying", "Sitting", "Standing", "Walking", "fall"]:
+                for i in range(5):
+                    data = rng.standard_normal((500, 256)).astype(np.float32)
+                    np.savetxt(
+                        root / f"{activity}_{i}.csv",
+                        data,
+                        delimiter=",",
+                        header=",".join(str(i) for i in range(256)),
+                        comments="",
+                    )
+            ds = HarDataset(str(root), split="train")
+            assert len(ds) == 24
+            x, y = ds[0]
+            assert x.shape == (50, 52)
+            assert y.item() in {0, 1, 2, 3, 4, 5}
+
+    def test_har_dataset_train_test_split(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            for activity in ["Walking", "Standing", "fall"]:
+                for i in range(10):
+                    data = rng.standard_normal((500, 256)).astype(np.float32)
+                    np.savetxt(
+                        root / f"{activity}_{i}.csv",
+                        data,
+                        delimiter=",",
+                        header=",".join(str(i) for i in range(256)),
+                        comments="",
+                    )
+            train_ds = HarDataset(str(root), split="train")
+            test_ds = HarDataset(str(root), split="test")
+            assert len(train_ds) == 24
+            assert len(test_ds) == 6
+
+    def test_har_dataset_skips_unknown_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            data = rng.standard_normal((500, 256)).astype(np.float32)
+            np.savetxt(
+                root / "Walking_0.csv",
+                data,
+                delimiter=",",
+                header=",".join(str(i) for i in range(256)),
+                comments="",
+            )
+            np.save(root / "unknown.npy", rng.random((10,)))
+            ds = HarDataset(str(root))
+            assert len(ds) == 1
+
 
 class TestScalerPersistence:
     def test_roundtrip(self):
@@ -231,7 +286,7 @@ class TestIntegration:
     def test_model_consumes_dataset_output(self):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
-            for label in ["walking", "running", "lying", "bending"]:
+            for label in ["walking", "running", "lying", "bending", "falling", "sitting", "standing"]:
                 (root / label).mkdir()
                 _make_synthetic_npy(
                     root / label / "a.npy", samples=3, timesteps=50, subcarriers=52
@@ -239,12 +294,12 @@ class TestIntegration:
             ds = Esp32Dataset(str(root))
             loader = torch.utils.data.DataLoader(ds, batch_size=4)
 
-            model = AttentionGRU(52, 128, 32, 4)
+            model = AttentionGRU(52, 128, 32, 7)
             model.eval()
             with torch.no_grad():
                 x, y = next(iter(loader))
                 out = model(x)
-                assert out.shape == (4, 4)
+                assert out.shape == (4, 7)
 
     def test_model_on_scaled_dataset(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -258,9 +313,9 @@ class TestIntegration:
             ds_scaled = Esp32Dataset(str(root), scaler=scaler)
             loader = torch.utils.data.DataLoader(ds_scaled, batch_size=2)
 
-            model = AttentionGRU(52, 128, 32, 4)
+            model = AttentionGRU(52, 128, 32, 7)
             model.eval()
             with torch.no_grad():
                 x, y = next(iter(loader))
                 out = model(x)
-                assert out.shape == (2, 4)
+                assert out.shape == (2, 7)

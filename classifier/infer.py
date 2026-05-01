@@ -22,7 +22,10 @@ import torch.nn.functional as F
 
 logger = logging.getLogger("classifier.infer")
 
-LABEL_MAP = {0: "walking", 1: "running", 2: "lying", 3: "bending"}
+LABEL_MAP = {
+    0: "walking", 1: "running", 2: "lying", 3: "bending",
+    4: "falling", 5: "sitting", 6: "standing",
+}
 TARGET_SUBCARRIERS = 52
 WINDOW_SIZE = 50
 STEP_SIZE = 25

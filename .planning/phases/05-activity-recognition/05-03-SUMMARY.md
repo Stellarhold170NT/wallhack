@@ -25,7 +25,7 @@
   - Normalizes windows: flatten → transform → reshape
   - Runs inference with `torch.no_grad()`
   - Softmax probabilities → label selection with confidence threshold
-  - 4 classes: walking, running, lying, bending (D-35)
+  - 7 classes: walking, running, lying, bending, falling, sitting, standing (D-35)
   - Emits `ActivityLabel.to_dict()` to output queue
   - Graceful shutdown via asyncio.Event
 
@@ -49,9 +49,23 @@
 
 ## Design Decisions Applied
 - **D-34:** Raw amplitude + StandardScaler (same preprocessing as training)
-- **D-35:** 4 classes: walking, running, lying, bending
+- **D-35:** 7 classes: walking, running, lying, bending, falling, sitting, standing
 - **D-37:** 50-frame windows with 25-frame step
 - **D-39:** Fork after server — consumer fans out to both raw_queue and amplitude_queue
+
+## Bug Fixes Applied (Post-Review)
+
+### Fix 1: `infer.py` — LABEL_MAP expanded to 7 classes
+- **Issue:** `LABEL_MAP` only had 4 classes; inference returned "unknown" for classes 4, 5, 6
+- **Fix:** Updated to `LABEL_MAP = {0: "walking", 1: "running", 2: "lying", 3: "bending", 4: "falling", 5: "sitting", 6: "standing"}`
+
+### Fix 2: `train.py` — Early stopping logic
+- **Issue:** `best_loss` initialized to `inf` but never updated when `val_acc > best_acc`, causing `elif val_loss_avg < best_loss` to always trigger → early stopping never fired
+- **Fix:** Restructured to use `improved` flag; both `best_acc` and `best_loss` are updated independently, patience resets once per epoch
+
+### Fix 3: `train.py` — MixUp double probability
+- **Issue:** `use_mixup` checked `mixup_prob` outside, then `mixup_augment()` checked again inside → effective probability = 0.3 × 0.3 = 0.09 instead of 0.3
+- **Fix:** Pass `prob=1.0` to `mixup_augment()` when already gated by outer check
 
 ## Verification
 ```

@@ -9,7 +9,7 @@
 | Commit | Message | Files |
 |--------|---------|-------|
 | `5f33359` | `feat(05): add AttentionGRU model with nn.GRU + additive attention` | `classifier/__init__.py`, `classifier/model.py` |
-| `1059a8e` | `feat(05): add ESP32/ARIL dataset loaders with scaler persistence and tests` | `classifier/dataset.py`, `tests/test_classifier.py` |
+| `1059a8e` | `feat(05): add ESP32/HAR dataset loaders with scaler persistence and tests` | `classifier/dataset.py`, `tests/test_classifier.py` |
 
 ### Artifacts
 
@@ -17,7 +17,7 @@
 |------|---------|--------|
 | `classifier/__init__.py` | Package init, exports model + dataset | Done |
 | `classifier/model.py` | AttentionGRU (nn.GRU + additive attention, 74,564 params) | Done |
-| `classifier/dataset.py` | Esp32Dataset, ArilDataset, scaler save/load | Done |
+| `classifier/dataset.py` | Esp32Dataset, HarDataset, scaler save/load | Done |
 | `tests/test_classifier.py` | 20 unit tests (model, dataset, scaler, integration) | Done |
 
 ### Decisions Implemented
@@ -28,7 +28,7 @@
 | D-36 | Center-crop to 52 subcarriers | `_center_crop_1d()` in dataset.py, symmetric pad if < 52 |
 | D-37 | 50-frame windows | Padding / truncation via `_center_crop_1d()` on time axis |
 | D-38 | `classifier/` package structure | Package with `__init__.py`, `model.py`, `dataset.py` |
-| D-41 | ARIL dataset loader for pre-training | `ArilDataset` loads .mat files, maps 6 labels |
+| D-41 | HAR dataset loader for pre-training | `HarDataset` loads CSV files, maps 5 labels |
 | D-42 | nn.GRU + attention, hidden=128, attention=32, ~75K params | `AttentionGRU` with `nn.GRU` + `nn.Sequential` attention |
 
 ### Verification Results

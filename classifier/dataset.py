@@ -6,9 +6,9 @@ import torch
 from sklearn.preprocessing import StandardScaler
 
 
-LABEL_MAP_ESP32 = {"walking": 0, "running": 1, "lying": 2, "bending": 3}
+LABEL_MAP_ESP32 = {"walking": 0, "running": 1, "lying": 2, "bending": 3, "falling": 4, "sitting": 5, "standing": 6}
 
-ARIL_LABEL_MAP = {
+HAR_LABEL_MAP = {
     1: 0,  # walk
     2: 1,  # stand
     3: 2,  # sit
@@ -82,44 +82,97 @@ class Esp32Dataset(torch.utils.data.Dataset):
         return x, label
 
 
-class ArilDataset(torch.utils.data.Dataset):
-    def __init__(self, root_dir: str, split: str = "train", scaler: StandardScaler | None = None):
-        import scipy.io as sio
+class HarDataset(torch.utils.data.Dataset):
+    """Load HAR dataset from IEEE DataPort (Experiments 2 + 3).
 
+    Supports both CSV (Experiment-3) and pcap (Experiment-2) sources.
+    All samples are center-cropped to (TARGET_TIMESTEPS, TARGET_SUBCARRIERS).
+
+    Unified 6-class labels:
+      Empty=0, Lying=1, Sitting=2, Standing=3, Walking=4, Falling=5
+    """
+
+    def __init__(self, root_dir: str, split: str = "train", scaler: StandardScaler | None = None):
+        self.root_dir = pathlib.Path(root_dir)
         self.scaler = scaler
 
-        if split == "train":
-            mat_path = pathlib.Path(root_dir) / "train_data_split_amp.mat"
-        elif split == "test":
-            mat_path = pathlib.Path(root_dir) / "test_data_split_amp.mat"
-        else:
-            raise ValueError(f"Unknown split: {split!r}")
-
-        mat = sio.loadmat(str(mat_path))
-
-        key = "train_data" if split == "train" else "test_data"
-        label_key = "train_activity_label" if split == "train" else "test_activity_label"
-
-        data = mat[key].astype(np.float32)
-        labels = mat[label_key].flatten().astype(np.int64)
+        self.label_map = {
+            "Empty": 0,
+            "Lying": 1,
+            "Sitting": 2,
+            "sit": 2,
+            "Standing": 3,
+            "stand": 3,
+            "Walking": 4,
+            "walk": 4,
+            "fall": 5,
+        }
 
         self.samples: list[np.ndarray] = []
         self.labels: list[int] = []
 
-        for i in range(data.shape[0]):
-            sample = data[i]
-            if sample.ndim == 2:
-                sample = sample.T
-            sample = sample.T
+        self._load_csv_files()
+        self._load_pcap_files()
 
-            sample = _center_crop_1d(sample, TARGET_TIMESTEPS, axis=0)
+        if split in ("train", "test") and len(self.samples) >= 2:
+            from sklearn.model_selection import train_test_split
 
-            self.samples.append(sample)
-            raw_label = int(labels[i])
-            mapped_label = ARIL_LABEL_MAP.get(raw_label, -1)
-            if mapped_label < 0:
+            indices = np.arange(len(self.samples))
+            train_idx, test_idx = train_test_split(
+                indices,
+                test_size=0.2,
+                random_state=42,
+                stratify=self.labels,
+            )
+            selected = train_idx if split == "train" else test_idx
+            self.samples = [self.samples[i] for i in selected]
+            self.labels = [self.labels[i] for i in selected]
+
+    def _load_csv_files(self) -> None:
+        for csv_path in sorted(self.root_dir.rglob("*.csv")):
+            name = csv_path.stem
+            activity = name.split("_")[0]
+            if activity not in self.label_map:
                 continue
-            self.labels.append(mapped_label)
+
+            try:
+                data = np.loadtxt(str(csv_path), delimiter=",", skiprows=1)
+            except Exception:
+                continue
+
+            if data.ndim != 2:
+                continue
+
+            data = data.astype(np.float32)
+            data = _center_crop_1d(data, TARGET_TIMESTEPS, axis=0)
+            data = _center_crop_1d(data, TARGET_SUBCARRIERS, axis=1)
+
+            self.samples.append(data)
+            self.labels.append(self.label_map[activity])
+
+    def _load_pcap_files(self) -> None:
+        from .pcap_reader import parse_experiment2_pcap
+
+        pcap_files = sorted(self.root_dir.rglob("*.pcap"))
+        for pcap_path in pcap_files:
+            activity = pcap_path.parent.name
+            if activity not in self.label_map:
+                continue
+
+            try:
+                data = parse_experiment2_pcap(str(pcap_path))
+            except Exception:
+                continue
+
+            if data is None or data.ndim != 2:
+                continue
+
+            data = data.astype(np.float32)
+            data = _center_crop_1d(data, TARGET_TIMESTEPS, axis=0)
+            data = _center_crop_1d(data, TARGET_SUBCARRIERS, axis=1)
+
+            self.samples.append(data)
+            self.labels.append(self.label_map[activity])
 
     def __len__(self) -> int:
         return len(self.samples)
