@@ -2,15 +2,15 @@
 
 **Project:** ESP32-S3 CSI Wallhack
 **Milestone:** v1.0 — Basic Sensing Pipeline
-**Current Phase:** Phase 2 Complete — Ready for Phase 3
-**Last Updated:** 2026-04-30
+**Current Phase:** Phase 3 Complete — Ready for Phase 4
+**Last Updated:** 2026-05-01
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-30)
 
 **Core value:** Reliable presence detection and activity classification (7 classes: walking, running, sitting down, standing up, lying down, bending, falling) using 2 ESP32-S3 nodes — architecture supports multi-node scalability.
-**Current focus:** Phase 2 — UDP Aggregator
+**Current focus:** Phase 3 — Signal Processing
 
 ## Phase Status
 
@@ -18,7 +18,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-30)
 |-------|--------|--------------|------------------|
 | 1: Firmware & Flashing | ✓ Complete | HW-01..HW-04 | 4/4 |
 | 2: UDP Aggregator | ✓ Complete | SIG-01..SIG-02 | 2/2 |
-| 3: Signal Processing | 🔴 Not started | SIG-03..SIG-06 | 0/4 |
+| 3: Signal Processing | ✓ Complete | SIG-03..SIG-06 | 4/4 |
 | 4: Presence & Intrusion | 🔴 Not started | SEC-01..SEC-04 | 0/4 |
 | 5: Activity Recognition | 🔴 Not started | ACT-01..ACT-05 | 0/5 |
 | 6: Dashboard & API | 🔴 Not started | UI-01..UI-05, API-01..API-02 | 0/7 |
@@ -86,6 +86,34 @@ None at project start.
 - Commit: `docs(02): gather phase 2 context` + execution commits
 - Ready for Phase 3: Signal Processing
 
+**2026-05-01 — Phase 3 Context Gathered**
+- Decisions captured:
+  - D-11: Separate `processor/` package, in-process coroutine, multi-purpose (CLI + importable)
+  - D-12: Config passed from Aggregator ("nhạc trưởng")
+  - D-13: Output pushes to second asyncio.Queue for Phase 4 handoff
+  - D-14: Both amplitude + phase processing (amplitude for HAR, phase for presence breathing)
+  - D-15: Custom Hampel filter implementation (~10-15 lines, no new deps)
+  - D-16: Dict output with metadata + flat feature array
+  - D-17: Real-time streaming primary, offline `.npy` replay secondary
+  - D-18: Per-node independent processing, decision-level fusion in Phase 4
+- Artifact: `.planning/phases/03-signal-processing/03-CONTEXT.md`
+- Artifact: `.planning/phases/03-signal-processing/03-DISCUSSION-LOG.md`
+- Ready for Phase 3 planning
+
+**2026-05-01 — Phase 3 Execution Complete**
+- Executed 3 plans (03-01, 03-02, 03-03) via ULW mode
+- Commits: 3 commits (01: phase unwrap/detrend + Hampel, 02: sliding window + features, 03: asyncio processor + CLI + aggregator wiring)
+- Tests: 48/48 passed across all test files
+- Key artifacts:
+  - `processor/phase.py` — unwrap_phase, detrend_phase (2π jump removal, linear drift correction)
+  - `processor/hampel.py` — Custom Hampel filter (MAD-based outlier detection, no scipy dependency)
+  - `processor/window.py` — SlidingWindow (200-frame window, 100-frame step, per-node isolation)
+  - `processor/features.py` — extract_features (130-element vector: 64 mean + 64 var + motion_energy + breathing_band)
+  - `processor/main.py` — CsiProcessor asyncio task (Queue-based, per-node state, max_nodes cap, graceful cancellation)
+  - `processor/__main__.py` — Offline CLI (`python -m processor --input x.npy --output y.npy`)
+  - `aggregator/main.py` — Wired CsiProcessor into event loop with `--processor-config` arg
+- Ready for Phase 4: Presence & Intrusion
+
 ---
 *State initialized: 2026-04-30*
-*Last updated: 2026-04-30 after Phase 1 execution*
+*Last updated: 2026-05-01 after Phase 3 context gathering*
