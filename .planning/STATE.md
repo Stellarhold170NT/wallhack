@@ -2,15 +2,15 @@
 
 **Project:** ESP32-S3 CSI Wallhack
 **Milestone:** v1.0 — Basic Sensing Pipeline
-**Current Phase:** Phase 3 Complete — Ready for Phase 4
-**Last Updated:** 2026-05-01 (post-bugfix)
+**Current Phase:** Phase 5 Context Gathered — Ready for planning
+**Last Updated:** 2026-05-01 (post-discuss-phase)
 
 ## Project Reference
 
 See: `.planning/PROJECT.md` (updated 2026-04-30)
 
 **Core value:** Reliable presence detection and activity classification (7 classes: walking, running, sitting down, standing up, lying down, bending, falling) using 2 ESP32-S3 nodes — architecture supports multi-node scalability.
-**Current focus:** Phase 3 — Signal Processing
+**Current focus:** Phase 5 — Activity Recognition
 
 ## Phase Status
 
@@ -19,8 +19,8 @@ See: `.planning/PROJECT.md` (updated 2026-04-30)
 | 1: Firmware & Flashing | ✓ Complete | HW-01..HW-04 | 4/4 |
 | 2: UDP Aggregator | ✓ Complete | SIG-01..SIG-02 | 2/2 |
 | 3: Signal Processing | ✓ Complete | SIG-03..SIG-06 | 4/4 |
-| 4: Presence & Intrusion | 🔴 Not started | SEC-01..SEC-04 | 0/4 |
-| 5: Activity Recognition | 🔴 Not started | ACT-01..ACT-05 | 0/5 |
+| 4: Presence & Intrusion | ✓ Complete | SEC-01..SEC-04 | 4/4 |
+| 5: Activity Recognition | 🟡 Context Ready | ACT-01..ACT-05 | 0/5 |
 | 6: Dashboard & API | 🔴 Not started | UI-01..UI-05, API-01..API-02 | 0/7 |
 
 ## Blockers
@@ -132,6 +132,36 @@ None at project start.
 - Artifact: `.planning/phases/04-presence-intrusion/04-CONTEXT.md`
 - Artifact: `.planning/phases/04-presence-intrusion/04-DISCUSSION-LOG.md`
 - Ready for Phase 4 planning
+
+**2026-05-01 — Phase 4 Execution Complete**
+- Executed 3 waves via ULW mode: detector core, alerts+async, aggregator wiring
+- Files created: `detector/presence.py`, `detector/fusion.py`, `detector/alerts.py`, `detector/main.py`
+- Tests: 41/41 passed (detector+alert+integration)
+- Hardware tuning: `baseline_skip_threshold_sigma=2.0` added to prevent startup contamination
+- Defaults retuned for 10 fps: `enter_frames=2`, `exit_frames=3`, `min_baseline_frames=6`
+- Synthetic CSI generator: `scripts/generate_synthetic_csi.py` (7 scenarios)
+- E2E test harness: `scripts/test_e2e_synthetic.py`
+- Real hardware test: baseline contamination identified as #1 accuracy limitation
+- Commit: `e365dcf` on main
+- Artifacts: `.planning/phases/04-presence-intrusion/04-03-SUMMARY.md`
+- Lesson: System is a "change detector" not a true "human detector"
+
+**2026-05-01 — Phase 5 Context Gathered**
+- Decisions captured:
+  - D-33: Hybrid data — ARIL pre-train + ESP32 fine-tune
+  - D-34: Raw amplitude windows + StandardScaler (like paper)
+  - D-35: 4 static classes for v1 (walk, run, lie, bend)
+  - D-36: Center-crop to 52 subcarriers (ARIL-compatible)
+  - D-37: 50-frame windows (~5s @ 10 fps)
+  - D-38: `classifier/` package structure
+  - D-39: Fork after server — parallel inference with presence detector
+  - D-40: CLI data collection tool `classifier.collect`
+  - D-41: Generic ARIL pre-training on all 6 classes
+  - D-42: nn.GRU + attention, hidden=128, skip pruning
+  - D-43: Offline training with augmentation + early stopping
+- Artifact: `.planning/phases/05-activity-recognition/05-CONTEXT.md`
+- Artifact: `.planning/phases/05-activity-recognition/05-DISCUSSION-LOG.md`
+- Ready for Phase 5 planning
 
 ---
 *State initialized: 2026-04-30*
