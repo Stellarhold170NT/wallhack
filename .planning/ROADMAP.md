@@ -153,36 +153,43 @@ Plans:
 
 ### Phase 5: Activity Recognition
 
-**Goal:** Train and deploy a 7-class activity classifier using proven Attention-GRU architecture. Architecture designed for multi-node scalability (supports 8-276 classes).
+**Goal:** Train and deploy a 4-class activity classifier using proven Attention-GRU architecture. Architecture designed for multi-node scalability (supports 8-276 classes).
 
 **Requirements:** ACT-01, ACT-02, ACT-03, ACT-04, ACT-05
 
 **Success Criteria:**
-1. Dataset contains ≥200 samples per class (walking, running, sitting down, standing up, lying down, bending, falling) collected in target environment. Transitions use 2s windows.
+1. Dataset contains ≥200 samples per class (walking, running, lying down, bending) collected in target environment.
 2. Attention-GRU model adapted from Kang et al. 2025 source (`nn.GRU` 128 hidden + attention 32 hidden, ~82K params) trains successfully
 3. Data augmentation implemented: `np.roll` shifting (±10 steps, 20×), MixUp (30% prob, α=1.0), multiplicative Gaussian noise (3×)
 4. Model achieves ≥85% accuracy on held-out test set (5-fold cross-validation) with ESP32-S3 CSI. Architecture proven at 99.33% (StanFi 6-class) and 100% (Nexmon HAR 8-class) on research NICs.
 5. Inference latency <10 ms per sample on laptop CPU (< 1M FLOPs)
 
 **Phase boundary:**
-- IN: Labeled CSI amplitude matrices `(samples, time_steps, N)` where N is the anchored subcarrier count (typically 64)
+- IN: Labeled CSI amplitude matrices `(samples, time_steps, N)` where N is the anchored subcarrier count (typically 52)
 - OUT: Trained `model.pth` + real-time inference pipeline
 
 **Canonical refs:**
 - `llm-wiki/raw/prunedAttentionGRU/PrunedAttentionGRU.py` — model architecture (78 lines)
 - `llm-wiki/raw/prunedAttentionGRU/train.py` — training loop with MixUp
 - `llm-wiki/raw/prunedAttentionGRU/augmentation.py` — shifting + noise augmentation
-- `llm-wiki/raw/prunedAttentionGRU/ARIL/aril.py` — 64-subcarrier input format (exact ESP32-S3 match)
+- `llm-wiki/raw/prunedAttentionGRU/ARIL/aril.py` — 52-subcarrier input format
 - `llm-wiki/raw/prunedAttentionGRU/HAR/har.py` — 4-class dataset loader reference
 
 **Adaptation notes:**
 - Replace `CustomGRU` (slow hand-written loop) with `nn.GRU` (10× speedup, cuDNN optimized)
 - Skip pruning code — unnecessary for our scale (v1). Architecture supports 8-276 classes natively for multi-node expansion.
-- Write `esp32_dataset.py` loader converting our CSI `.npy`/`.csv` to `(samples, time, N)` format (N = anchored subcarrier count, typically 64)
+- Center-crop to 52 subcarriers for ARIL compatibility
+- 50-frame windows (~5s at 10 fps)
 - Add validation split + early stopping (missing from original code)
-- Dataset loader should handle variable subcarrier counts by filtering to most-common length (NpyWriter behavior) or using processor-adapted data
 
 **Depends on:** Phase 2 (data collection can start as soon as aggregator works; minimal preprocessing needed)
+
+**Plans:** 3 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Model architecture (AttentionGRU) + dataset infrastructure (ESP32 + ARIL loaders + StandardScaler)
+- [ ] 05-02-PLAN.md — Training pipeline (augmentation + ARIL pre-train + ESP32 fine-tune + cross-validation) + CLI data collection tool
+- [ ] 05-03-PLAN.md — Real-time inference (CsiClassifier asyncio task) + aggregator wiring + offline inference CLI
 
 ---
 
