@@ -1,0 +1,177 @@
+import json
+import pathlib
+
+import numpy as np
+import torch
+from sklearn.preprocessing import StandardScaler
+
+
+LABEL_MAP_ESP32 = {"walking": 0, "running": 1, "lying": 2, "bending": 3}
+
+ARIL_LABEL_MAP = {
+    1: 0,  # walk
+    2: 1,  # stand
+    3: 2,  # sit
+    4: 3,  # lie
+    5: 4,  # run
+    6: 5,  # clean
+}
+
+TARGET_SUBCARRIERS = 52
+TARGET_TIMESTEPS = 50
+
+
+def _center_crop_1d(arr: np.ndarray, target: int, axis: int) -> np.ndarray:
+    n = arr.shape[axis]
+    if n <= target:
+        pad_before = (target - n) // 2
+        pad_after = target - n - pad_before
+        pad_width = [(0, 0)] * arr.ndim
+        pad_width[axis] = (pad_before, pad_after)
+        return np.pad(arr, pad_width, mode="constant")
+    start = (n - target) // 2
+    slc = [slice(None)] * arr.ndim
+    slc[axis] = slice(start, start + target)
+    return arr[tuple(slc)]
+
+
+class Esp32Dataset(torch.utils.data.Dataset):
+    def __init__(self, root_dir: str, transform=None, scaler: StandardScaler | None = None):
+        self.root_dir = pathlib.Path(root_dir)
+        self.transform = transform
+        self.scaler = scaler
+        self.samples: list[np.ndarray] = []
+        self.labels: list[int] = []
+
+        for label_name, label_idx in LABEL_MAP_ESP32.items():
+            label_dir = self.root_dir / label_name
+            if not label_dir.is_dir():
+                continue
+            for npy_path in sorted(label_dir.glob("*.npy")):
+                data = np.load(npy_path)
+                if data.ndim != 3:
+                    continue
+                for i in range(data.shape[0]):
+                    sample = data[i].astype(np.float32)
+
+                    sample = _center_crop_1d(sample, TARGET_SUBCARRIERS, axis=1)
+                    sample = _center_crop_1d(sample, TARGET_TIMESTEPS, axis=0)
+
+                    self.samples.append(sample)
+                    self.labels.append(label_idx)
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def __getitem__(self, idx: int):
+        x = self.samples[idx].copy()
+        label = self.labels[idx]
+
+        if self.scaler is not None:
+            orig_shape = x.shape
+            x_2d = x.reshape(1, -1)
+            x_2d = self.scaler.transform(x_2d)
+            x = x_2d.reshape(orig_shape)
+
+        x = torch.from_numpy(x)
+        label = torch.tensor(label, dtype=torch.long)
+
+        if self.transform is not None:
+            x = self.transform(x)
+
+        return x, label
+
+
+class ArilDataset(torch.utils.data.Dataset):
+    def __init__(self, root_dir: str, split: str = "train", scaler: StandardScaler | None = None):
+        import scipy.io as sio
+
+        self.scaler = scaler
+
+        if split == "train":
+            mat_path = pathlib.Path(root_dir) / "train_data_split_amp.mat"
+        elif split == "test":
+            mat_path = pathlib.Path(root_dir) / "test_data_split_amp.mat"
+        else:
+            raise ValueError(f"Unknown split: {split!r}")
+
+        mat = sio.loadmat(str(mat_path))
+
+        key = "train_data" if split == "train" else "test_data"
+        label_key = "train_activity_label" if split == "train" else "test_activity_label"
+
+        data = mat[key].astype(np.float32)
+        labels = mat[label_key].flatten().astype(np.int64)
+
+        self.samples: list[np.ndarray] = []
+        self.labels: list[int] = []
+
+        for i in range(data.shape[0]):
+            sample = data[i]
+            if sample.ndim == 2:
+                sample = sample.T
+            sample = sample.T
+
+            sample = _center_crop_1d(sample, TARGET_TIMESTEPS, axis=0)
+
+            self.samples.append(sample)
+            raw_label = int(labels[i])
+            mapped_label = ARIL_LABEL_MAP.get(raw_label, -1)
+            if mapped_label < 0:
+                continue
+            self.labels.append(mapped_label)
+
+    def __len__(self) -> int:
+        return len(self.samples)
+
+    def __getitem__(self, idx: int):
+        x = self.samples[idx].copy()
+        label = self.labels[idx]
+
+        if self.scaler is not None:
+            orig_shape = x.shape
+            x_2d = x.reshape(1, -1)
+            x_2d = self.scaler.transform(x_2d)
+            x = x_2d.reshape(orig_shape)
+
+        x = torch.from_numpy(x)
+        label = torch.tensor(label, dtype=torch.long)
+
+        return x, label
+
+
+def fit_scaler(dataset: torch.utils.data.Dataset) -> StandardScaler:
+    samples = []
+    for i in range(len(dataset)):
+        x, _ = dataset[i]
+        if isinstance(x, torch.Tensor):
+            x = x.numpy()
+        samples.append(x.flatten())
+    all_data = np.stack(samples, axis=0)
+    scaler = StandardScaler()
+    scaler.fit(all_data)
+    return scaler
+
+
+def save_scaler(scaler: StandardScaler, path: str) -> None:
+    state = {
+        "mean": scaler.mean_.tolist(),
+        "scale": scaler.scale_.tolist(),
+        "var": scaler.var_.tolist(),
+        "n_features": int(scaler.n_features_in_),
+        "n_samples_seen": int(scaler.n_samples_seen_),
+    }
+    with open(path, "w") as f:
+        json.dump(state, f)
+
+
+def load_scaler(path: str) -> StandardScaler:
+    with open(path) as f:
+        state = json.load(f)
+    scaler = StandardScaler()
+    scaler.n_features_in_ = state["n_features"]
+    scaler.mean_ = np.array(state["mean"], dtype=np.float64)
+    scaler.scale_ = np.array(state["scale"], dtype=np.float64)
+    scaler.var_ = np.array(state["var"], dtype=np.float64)
+    scaler.n_samples_seen_ = state["n_samples_seen"]
+    return scaler
