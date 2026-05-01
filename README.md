@@ -1,4 +1,4 @@
-<img width="2069" height="532" alt="image" src="https://github.com/user-attachments/assets/8385a583-feaf-4f11-a5a0-0ac12ad6640a" />
+<img width="2427" height="532" alt="image" src="https://github.com/user-attachments/assets/d923d8a3-6a45-45f7-8293-842c36c72c5a" />
 
 
 # ESP32-S3 CSI Wallhack - Setup Guide
