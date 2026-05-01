@@ -142,6 +142,13 @@ Plans:
 
 **Depends on:** Phase 3
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Core detection engine (adaptive baseline, hysteresis, multi-node fusion)
+- [ ] 04-02-PLAN.md — Alert system (cooldown, JSONL persistence, in-memory buffer) + CsiDetector async task
+- [ ] 04-03-PLAN.md — Aggregator wiring (third Queue, node health handoff, graceful shutdown) + integration tests
+
 ---
 
 ### Phase 5: Activity Recognition
