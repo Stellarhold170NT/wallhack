@@ -33,12 +33,19 @@
 │                                                   │              │
 │                                    asyncio.Queue handoff         │
 │                                                   │              │
-│                                                   ▼              │
-│                                        ┌────────────────────┐   │
-│                                        │   NpyWriter         │   │
-│                                        │   persistence.py    │   │
-│                                        └─────────┬──────────┘   │
-└──────────────────────────────────────────────────┼──────────────┘
+│                          ┌────────────────────────┴──────────┐  │
+│                          ▼                                    ▼  │
+│              ┌────────────────────┐              ┌────────────────────┐
+│              │   CsiProcessor      │              │   NpyWriter         │
+│              │   processor/main.py │              │   persistence.py    │
+│              └─────────┬──────────┘              └─────────┬──────────┘
+│                        │ asyncio.Queue (feature vectors)  │
+│                        ▼                                    │
+│               ┌────────────────────┐                        │
+│               │   Phase 4 Consumer  │                        │
+│               │   (presence detection)│                      │
+│               └────────────────────┘                        │
+└─────────────────────────────────────────────────────────────┼──┘
                                                      │
                                                      │ .npy + .json files
                                                      ▼
@@ -75,6 +82,9 @@
 | CSI Frame | Dataclass for parsed frame data | `aggregator/frame.py` |
 | Node Buffer | Per-node ring buffer with drop-oldest semantics | `aggregator/buffer.py` |
 | NpyWriter | Accumulate amplitudes, flush to .npy with auto-rotation | `aggregator/persistence.py` |
+| CsiProcessor | Real-time signal processing: sliding window, Hampel filter, feature extraction | `processor/main.py` |
+| SlidingWindow | Circular buffer for fixed-size windows with step-based emission | `processor/window.py` |
+| Feature Extractor | Band power + per-subcarrier statistics from amplitude windows | `processor/features.py` |
 | Viewer | Load .npy, render heatmap via matplotlib | `scripts/view_csi.py` |
 
 ## Pattern Overview
@@ -120,7 +130,7 @@
 
 ## Data Flow
 
-### Primary Request Path (UDP datagram → disk)
+### Primary Request Path (UDP datagram → processor + disk)
 
 1. **ESP32-S3 captures CSI** — WiFi CSI callback fires per received packet, rate-limited to ~50Hz in `csi_collector.c:80-105`
 2. **Serialize to ADR-018** — `csi_serialize_frame()` packs header + I/Q bytes in `csi_collector.c:34-78`
@@ -130,8 +140,11 @@
 6. **Dynamic node discovery** — first frame from unknown node_id creates `NodeState` in `server.py:85-98`
 7. **Per-node buffering** — frame pushed to `NodeBuffer` (deque with maxlen) in `server.py:113`
 8. **Queue handoff** — frame put on `asyncio.Queue` for consumer in `server.py:116`
-9. **Consumer loop** — `consumer()` task reads queue and calls `writer.write()` in `main.py:36-42`
+9. **Consumer loop** — `consumer()` task reads queue and calls `writer.write()` in `main.py:62-67`
 10. **Accumulate & flush** — `NpyWriter.write()` appends amplitudes, auto-flushes at rotation_frames in `persistence.py:55-67`
+11. **Processor task** — `CsiProcessor.run()` reads same Queue, builds per-node `SlidingWindow`, applies Hampel filter, extracts features in `processor/main.py:49-137`
+12. **Feature emission** — `extract_features()` computes band power + statistics in `processor/features.py:10-64`; feature dict logged at INFO level (D-20)
+13. **Phase 4 handoff** — feature dict pushed to second `asyncio.Queue` in `processor/main.py:131-135`
 
 ### Secondary Flow: Graceful Shutdown
 
@@ -177,6 +190,12 @@
 - Pattern: Internal `_buffers[node_id]` dict of lists; auto-rotation every N frames; `flush_all()` on shutdown
 - Output: `node_{id}_{ts}_{batch:04d}.npy` + companion `.json` metadata per batch
 
+**CsiProcessor (signal processing task):**
+- Purpose: Real-time feature extraction from CSI amplitude streams
+- File: `processor/main.py`
+- Pattern: Asyncio task with per-node `SlidingWindow` state; handles variable subcarrier counts via crop/pad adaptation (D-19)
+- Output: Feature dicts pushed to second `asyncio.Queue` for Phase 4 consumption
+
 **nvs_config_t (C struct):**
 - Purpose: WiFi credentials, aggregator target, and node identity loaded from NVM storage
 - File: `firmware/esp32-csi-node/main/nvs_config.h`
@@ -204,6 +223,11 @@
 - Location: `scripts/view_csi.py`
 - Triggers: `python scripts/view_csi.py <session_dir>`
 - Responsibilities: Load `.npy` files from session directory, render heatmap via matplotlib
+
+**Processor Offline CLI:**
+- Location: `processor/__main__.py`
+- Triggers: `python -m processor --input x.npy --output y.npy`
+- Responsibilities: Process saved `.npy` amplitude arrays through identical Hampel + feature extraction pipeline
 
 ## Architectural Constraints
 

@@ -65,7 +65,7 @@ Plans:
 **Success Criteria:**
 1. `python aggregator.py --port 5005` starts without errors
 2. Receives UDP frames from 2 nodes concurrently at ≥20 Hz each
-3. Parser validates magic and produces structured object with node_id, sequence, RSSI, noise_floor, amplitudes[64], phases[64]
+3. Parser validates magic and produces structured object with node_id, sequence, RSSI, noise_floor, amplitudes[N], phases[N] where N is dynamic (64/128/192)
 4. Logs frame rate per node and detects packet loss via sequence gaps
 
 **Phase boundary:**
@@ -95,8 +95,9 @@ Plans:
 **Success Criteria:**
 1. Phase unwrapping removes 2π jumps; linear detrend reduces drift
 2. Hampel filter reduces spike amplitude by >80% on synthetic spikes
-3. 4-second sliding window (200 frames @ 50 Hz) produces amplitude matrix [64 subcarriers × 200 time]
+3. 4-second sliding window (200 frames @ 50 Hz) produces amplitude matrix [N subcarriers × 200 time], where N is anchored to first frame (64/128/192)
 4. Feature vector computed per window: mean_amp, variance, motion_energy (0.5-3 Hz band power), breathing_band (0.1-0.5 Hz)
+5. Variable subcarrier counts (64/128/192) are handled gracefully via crop/pad adaptation without window resets or frame drops
 
 **Phase boundary:**
 - IN: Structured raw CSI frames
@@ -157,7 +158,7 @@ Plans:
 5. Inference latency <10 ms per sample on laptop CPU (< 1M FLOPs)
 
 **Phase boundary:**
-- IN: Labeled CSI amplitude matrices `(samples, time_steps, 64)`
+- IN: Labeled CSI amplitude matrices `(samples, time_steps, N)` where N is the anchored subcarrier count (typically 64)
 - OUT: Trained `model.pth` + real-time inference pipeline
 
 **Canonical refs:**
@@ -170,8 +171,9 @@ Plans:
 **Adaptation notes:**
 - Replace `CustomGRU` (slow hand-written loop) with `nn.GRU` (10× speedup, cuDNN optimized)
 - Skip pruning code — unnecessary for our scale (v1). Architecture supports 8-276 classes natively for multi-node expansion.
-- Write `esp32_dataset.py` loader converting our CSI `.npy`/`.csv` to `(samples, time, 64)` format
+- Write `esp32_dataset.py` loader converting our CSI `.npy`/`.csv` to `(samples, time, N)` format (N = anchored subcarrier count, typically 64)
 - Add validation split + early stopping (missing from original code)
+- Dataset loader should handle variable subcarrier counts by filtering to most-common length (NpyWriter behavior) or using processor-adapted data
 
 **Depends on:** Phase 2 (data collection can start as soon as aggregator works; minimal preprocessing needed)
 
@@ -252,4 +254,4 @@ This roadmap evolves:
 
 ---
 *Roadmap created: 2026-04-30*
-*Last updated: 2026-05-01 after Phase 3 completion*
+*Last updated: 2026-05-01 after Phase 3 completion + subcarrier adaptation bugfix*

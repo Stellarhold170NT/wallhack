@@ -247,12 +247,13 @@ npx jest --coverage
 - Maestro config in `e2e/.maestro/config.yaml` (empty — defaults)
 - Currently test files appear to be empty stubs (0 bytes)
 
-**Python Tests (aggregator):**
+**Python Tests (aggregator + processor):**
 - Class-based test organization: `TestParseValidFrame`, `TestParseInvalidFrame`, `TestAmplitudePhase`, `TestCorruptedFrame`, `TestCSIFrameDataclass`
 - `pytest` parameterization for edge cases
 - Factory helper pattern: `build_frame()` constructs test data
 - Fuzz testing: `test_parse_1000_random_frames_no_crash`
-- Async test via `@pytest.mark.asyncio` for UDP server tests
+- Async test via `@pytest.mark.asyncio` for UDP server and processor tests
+- Processor integration tests cover: per-node isolation, subcarrier adaptation (64→128 crop/pad), cancellation, max nodes cap
 
 **Rust Tests (v2 crates):**
 - Integration tests in `tests/` directories per crate

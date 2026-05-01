@@ -3,7 +3,7 @@
 **Project:** ESP32-S3 CSI Wallhack
 **Milestone:** v1.0 — Basic Sensing Pipeline
 **Current Phase:** Phase 3 Complete — Ready for Phase 4
-**Last Updated:** 2026-05-01
+**Last Updated:** 2026-05-01 (post-bugfix)
 
 ## Project Reference
 
@@ -103,17 +103,18 @@ None at project start.
 **2026-05-01 — Phase 3 Execution Complete**
 - Executed 3 plans (03-01, 03-02, 03-03) via ULW mode
 - Commits: 3 commits (01: phase unwrap/detrend + Hampel, 02: sliding window + features, 03: asyncio processor + CLI + aggregator wiring)
-- Tests: 48/48 passed across all test files
+- Tests: 49/49 passed across all test files
 - Key artifacts:
   - `processor/phase.py` — unwrap_phase, detrend_phase (2π jump removal, linear drift correction)
   - `processor/hampel.py` — Custom Hampel filter (MAD-based outlier detection, no scipy dependency)
   - `processor/window.py` — SlidingWindow (200-frame window, 100-frame step, per-node isolation)
-  - `processor/features.py` — extract_features (130-element vector: 64 mean + 64 var + motion_energy + breathing_band)
-  - `processor/main.py` — CsiProcessor asyncio task (Queue-based, per-node state, max_nodes cap, graceful cancellation)
+  - `processor/features.py` — extract_features (N*2+2 element vector: N mean + N var + motion_energy + breathing_band)
+  - `processor/main.py` — CsiProcessor asyncio task (Queue-based, per-node state, max_nodes cap, graceful cancellation, **dynamic subcarrier adaptation D-19**)
   - `processor/__main__.py` — Offline CLI (`python -m processor --input x.npy --output y.npy`)
   - `aggregator/main.py` — Wired CsiProcessor into event loop with `--processor-config` arg
+- Bug fix applied: variable subcarrier counts (64/128/192) now handled via center-crop / symmetric pad instead of window reset (previously caused 100% frame drop)
 - Ready for Phase 4: Presence & Intrusion
 
 ---
 *State initialized: 2026-04-30*
-*Last updated: 2026-05-01 after Phase 3 context gathering*
+*Last updated: 2026-05-01 after Phase 3 execution + subcarrier adaptation bugfix*

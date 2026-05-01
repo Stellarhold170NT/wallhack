@@ -87,16 +87,16 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| HW-01 | Phase 1 | Pending |
-| HW-02 | Phase 1 | Pending |
-| HW-03 | Phase 1 | Pending |
-| HW-04 | Phase 1 | Pending |
-| SIG-01 | Phase 2 | Pending |
-| SIG-02 | Phase 2 | Pending |
-| SIG-03 | Phase 3 | Pending |
-| SIG-04 | Phase 3 | Pending |
-| SIG-05 | Phase 3 | Pending |
-| SIG-06 | Phase 3 | Pending |
+| HW-01 | Phase 1 | Complete |
+| HW-02 | Phase 1 | Complete |
+| HW-03 | Phase 1 | Complete |
+| HW-04 | Phase 1 | Complete |
+| SIG-01 | Phase 2 | Complete |
+| SIG-02 | Phase 2 | Complete |
+| SIG-03 | Phase 3 | Complete |
+| SIG-04 | Phase 3 | Complete |
+| SIG-05 | Phase 3 | Complete |
+| SIG-06 | Phase 3 | Complete |
 | SEC-01 | Phase 4 | Pending |
 | SEC-02 | Phase 4 | Pending |
 | SEC-03 | Phase 4 | Pending |
@@ -121,9 +121,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Unmapped: 0 ✓
 
 **Note:** ACT-01 expanded from 4→7 classes. Architecture supports 8-276 classes (Sign-Fi proven at 99.32%).
+**Note:** Phase 3 now supports dynamic subcarrier counts (64/128/192) via crop/pad adaptation (D-19), not limited to fixed 64-SC frames.
 
 ---
-*Last updated: 2026-04-30 after scope expansion (4→6 classes)*
+*Last updated: 2026-05-01 after Phase 3 completion + subcarrier adaptation fix*
 
 ---
 *Requirements defined: 2026-04-30*

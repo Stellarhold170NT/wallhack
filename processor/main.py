@@ -12,7 +12,7 @@ from aggregator.frame import CSIFrame
 from processor.hampel import hampel_filter
 from processor.window import SlidingWindow
 from processor.features import extract_features
-from processor.phase import unwrap_phase, detrend_phase
+from processor.phase import unwrap_phase, detrend_phase  # noqa: F401 — reserved for phase features
 
 logger = logging.getLogger(__name__)
 
@@ -82,20 +82,15 @@ class CsiProcessor:
 
         sw = self._windows[node_id]
 
-        # Handle subcarrier count changes mid-stream: reset window if count differs
+        # Adapt frame to window's subcarrier count instead of skipping/resetting
         if sw.n_subcarriers != n_subcarriers:
-            logger.warning(
-                "Node %d subcarrier count changed %d → %d — resetting window",
+            logger.debug(
+                "Node %d: adapting %d-SC frame to window %d",
                 node_id,
-                sw.n_subcarriers,
                 n_subcarriers,
+                sw.n_subcarriers,
             )
-            self._windows[node_id] = SlidingWindow(
-                n_subcarriers=n_subcarriers,
-                window_size=self.config["window_size"],
-                step_size=self.config["step_size"],
-            )
-            sw = self._windows[node_id]
+            frame = self._adapt_frame(frame, sw.n_subcarriers)
 
         amp_window = sw.push(frame)
         if amp_window is None:
@@ -106,8 +101,7 @@ class CsiProcessor:
 
         # Optional phase processing for presence detection
         phase_window = None
-        if frame.phases and len(frame.phases) == n_subcarriers:
-            phases = np.asarray(frame.phases, dtype=np.float64)
+        if frame.phases and len(frame.phases) == sw.n_subcarriers:
             # Phase window requires historical data; use current frame only
             # for now. Full phase windowing needs phase collection per node.
             # For v1, we skip phase-based features in real-time path.
@@ -133,6 +127,13 @@ class CsiProcessor:
             "features": flat,
         }
 
+        logger.info(
+            "Node %d: emitted feature vector (len=%d, sc=%d)",
+            node_id,
+            len(flat),
+            sw.n_subcarriers,
+        )
+
         if self.output_queue is not None:
             try:
                 self.output_queue.put_nowait(feature_dict)
@@ -140,6 +141,47 @@ class CsiProcessor:
                 logger.warning("Output queue full — dropping feature vector")
 
         return feature_dict
+
+    def _adapt_frame(self, frame: CSIFrame, target_sc: int) -> CSIFrame:
+        """Pad or crop frame amplitudes/phases to target subcarrier count."""
+        if frame.n_subcarriers == target_sc:
+            return frame
+
+        new_amps = self._adapt_array(
+            np.asarray(frame.amplitudes, dtype=np.float64), target_sc
+        )
+        new_phases = None
+        if frame.phases:
+            new_phases = self._adapt_array(
+                np.asarray(frame.phases, dtype=np.float64), target_sc
+            )
+
+        return CSIFrame(
+            node_id=frame.node_id,
+            sequence=frame.sequence,
+            timestamp_ms=frame.timestamp_ms,
+            rssi=frame.rssi,
+            noise_floor=frame.noise_floor,
+            frequency_mhz=frame.frequency_mhz,
+            n_subcarriers=target_sc,
+            amplitudes=new_amps.tolist(),
+            phases=new_phases.tolist() if new_phases is not None else [],
+        )
+
+    @staticmethod
+    def _adapt_array(arr: np.ndarray, target: int) -> np.ndarray:
+        """Pad or crop a 1-D array to target length."""
+        if len(arr) == target:
+            return arr
+        if len(arr) > target:
+            # Crop from center to preserve core subcarriers
+            start = (len(arr) - target) // 2
+            return arr[start : start + target]
+        # Zero-pad symmetrically
+        pad_total = target - len(arr)
+        pad_left = pad_total // 2
+        pad_right = pad_total - pad_left
+        return np.pad(arr, (pad_left, pad_right), mode="constant")
 
     def _apply_hampel(self, window: np.ndarray) -> np.ndarray:
         """Apply Hampel filter to each subcarrier column."""

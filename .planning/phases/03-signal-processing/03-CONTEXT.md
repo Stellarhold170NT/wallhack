@@ -55,11 +55,18 @@ Clean raw CSI and extract features for presence detection. For Activity Recognit
   - Outer dict: `{"node_id": int, "window_start_ms": int, "window_end_ms": int, "features": np.ndarray}`
   - Inner `features` array: flat numpy array of shape `(n_features,)` for direct model consumption
   - Feature list per window:
-    - `mean_amp[64]` — mean amplitude per subcarrier
-    - `var_amp[64]` — variance per subcarrier
+    - `mean_amp[N]` — mean amplitude per subcarrier (N = window's anchored subcarrier count)
+    - `var_amp[N]` — variance per subcarrier
     - `motion_energy` — band power 0.5-3 Hz (aggregate across subcarriers)
     - `breathing_band` — band power 0.1-0.5 Hz (aggregate across subcarriers)
-  - Total feature count: ~130 features (64 + 64 + 1 + 1)
+  - Total feature count: `N*2 + 2` (e.g. 130 for N=64, 258 for N=128)
+
+### Dynamic Subcarrier Count Adaptation
+- **D-19:** Frame subcarrier count is adapted to the window's anchored count rather than skipping or resetting
+  - Firmware may emit variable subcarrier counts (64/128/192) depending on received packet type (LLTF/HTLTF/STBC)
+  - Processor crops from center (if frame > window) or zero-pads symmetrically (if frame < window)
+  - Window shape remains stable; no window resets on mid-stream subcarrier changes
+  - Per-node `SlidingWindow` is created on first frame and anchored to that frame's subcarrier count
 
 ### Windowing Strategy
 - **D-17:** Real-time streaming primary, offline `.npy` replay secondary
@@ -70,10 +77,16 @@ Clean raw CSI and extract features for presence detection. For Activity Recognit
 
 ### Multi-Node Processing
 - **D-18:** Per-node independent processing, decision-level fusion deferred to Phase 4
-  - Each node gets its own processor instance or internal per-node state
+  - Each node gets its own `SlidingWindow` state keyed by `node_id`
   - Output: separate feature vector per node every 2 seconds (with 4s window)
   - Phase 4 fuses decisions (e.g., OR logic: presence if any node detects)
   - No cross-node signal-level fusion (avoids clock drift issues per ADR-012)
+
+### Observability
+- **D-20:** INFO-level logging on every feature vector emission
+  - Log format: `Node {id}: emitted feature vector (len={n_features}, sc={n_subcarriers})`
+  - Enables runtime verification that the processor is producing output
+  - DEBUG-level logging for subcarrier adaptation events
 
 ### the agent's Discretion
 - Exact Hampel window size and MAD threshold (within 5-15 sample window, 2.5-4.0 threshold range)
@@ -119,9 +132,10 @@ Clean raw CSI and extract features for presence detection. For Activity Recognit
 ## Existing Code Insights
 
 ### Reusable Assets
-- `aggregator/parser.py` — Amplitude and phase extraction already implemented; processor should import these values directly from CSIFrame rather than recompute
+- `aggregator/parser.py` — Amplitude and phase extraction already implemented; processor imports these values directly from CSIFrame rather than recomputing
 - `aggregator/frame.py` — CSIFrame dataclass with `amplitudes`, `phases`, `n_subcarriers`, `node_id` fields
-- `aggregator/buffer.py` — Per-node deque ring buffer pattern; processor can adapt for window buffering
+- `aggregator/buffer.py` — Per-node deque ring buffer pattern; processor adapts for window buffering
+- `processor/main.py` — `CsiProcessor` class with per-node `SlidingWindow` state, Hampel filter, feature extraction, and subcarrier adaptation (`_adapt_frame`)
 - `scripts/view_csi.py` — matplotlib heatmap visualization of `.npy` files (useful for offline verification)
 
 ### Established Patterns
@@ -131,10 +145,11 @@ Clean raw CSI and extract features for presence detection. For Activity Recognit
 - Logging via Python standard `logging` module
 
 ### Integration Points
-- Phase 2 → Phase 3: `asyncio.Queue` (D-06) feeds raw CSI frames into processor
+- Phase 2 → Phase 3: `asyncio.Queue` (D-06) feeds raw CSI frames into `CsiProcessor.process_frame()`
 - Phase 3 → Phase 4: Second `asyncio.Queue` feeds feature vectors into presence detector
 - Phase 3 → Phase 5: `.npy` amplitude matrices saved to disk for offline HAR training
 - Phase 3 → Phase 6: Feature dict metadata (node_id, timestamps) usable by dashboard health display
+- Subcarrier adaptation: `processor/main.py:_adapt_frame()` transforms incoming frames to match anchored window shape (D-19)
 
 </code_context>
 

@@ -145,13 +145,14 @@
 
 ## Fragile Areas
 
-### Inconsistent Subcarrier Count Handling
+### Inconsistent Subcarrier Count Handling (Partially Resolved)
 
-- **Component:** `NpyWriter._flush_node()`
-- **Files:** `aggregator/persistence.py` (lines 92-108)
-- **Why fragile:** When frames within a buffer have inconsistent subcarrier counts, the writer filters to the most common length — silently **discarding frames** that don't match. This masks firmware bugs or WiFi configuration issues that cause variable subcarrier counts. The warnings are at `WARNING` level and may go unnoticed.
-- **Safe modification:** When adding new metrics or changing dimensions, ensure the most-common-length filter doesn't discard valid data. Add explicit logging of discarded frame count.
-- **Test coverage:** No test covers the inconsistent-subcarrier path.
+- **Component:** `NpyWriter._flush_node()` and `CsiProcessor.process_frame()`
+- **Files:** `aggregator/persistence.py` (lines 92-108), `processor/main.py` (lines 85-93)
+- **Status:** Processor now handles variable subcarrier counts via **crop/pad adaptation** (D-19). `CsiProcessor._adapt_frame()` crops from center (frame > window) or zero-pads symmetrically (frame < window) to match the anchored window shape. This prevents the window-reset cascade that previously caused 100% frame drops.
+- **Remaining risk:** `NpyWriter` still filters to most-common length on flush, silently discarding frames. The processor adaptation prevents most real-time issues, but persisted `.npy` files may still lose frames with outlier subcarrier counts during batch flush.
+- **Safe modification:** Add explicit count of discarded frames in `NpyWriter._flush_node()` log. Consider aligning NpyWriter adaptation logic with processor (crop/pad instead of filter).
+- **Test coverage:** Processor adaptation covered by `test_processor_integration.py::test_subcarrier_count_change_adapts_frame`. NpyWriter inconsistent-subcarrier path still untested.
 
 ### `strncpy` Usage in Firmware (Truncation Risk)
 
