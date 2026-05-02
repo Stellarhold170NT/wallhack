@@ -117,6 +117,36 @@ async def run_server(args: argparse.Namespace) -> None:
             )
             classifier = None
 
+    dashboard_app = None
+    dashboard_state = None
+    dashboard_task = None
+    uvicorn_server = None
+    if args.dashboard:
+        try:
+            from dashboard.state import DashboardState
+            from dashboard.app import create_app
+            import uvicorn
+            dashboard_state = DashboardState(
+                alert_queue=alert_queue,
+                activity_queue=activity_queue,
+                amplitude_queue=amplitude_queue,
+                node_source=lambda: server.nodes,
+            )
+            dashboard_app = create_app(dashboard_state)
+            config = uvicorn.Config(
+                dashboard_app,
+                host="0.0.0.0",
+                port=args.dashboard_port,
+                loop="asyncio",
+                log_level="warning",
+            )
+            uvicorn_server = uvicorn.Server(config)
+            logger.info("Dashboard enabled on http://0.0.0.0:%d", args.dashboard_port)
+        except ImportError as exc:
+            logger.warning("Dashboard dependencies missing: %s", exc)
+        except Exception as exc:
+            logger.error("Failed to initialize dashboard: %s", exc)
+
     consumer_task: asyncio.Task | None = None
     shutdown_event = asyncio.Event()
 
@@ -134,6 +164,18 @@ async def run_server(args: argparse.Namespace) -> None:
             return
         shutdown_event.set()
         logger.info("Shutting down...")
+        if uvicorn_server is not None:
+            logger.info("Stopping dashboard server...")
+            uvicorn_server.should_exit = True
+            if dashboard_task and not dashboard_task.done():
+                try:
+                    await asyncio.wait_for(dashboard_task, timeout=5.0)
+                except asyncio.TimeoutError:
+                    logger.warning("Dashboard server did not stop gracefully")
+                    uvicorn_server.force_exit = True
+                    await dashboard_task
+        if dashboard_state is not None:
+            dashboard_state.stop()
         if classifier_task and not classifier_task.done():
             classifier_task.cancel()
             try:
@@ -189,6 +231,10 @@ async def run_server(args: argparse.Namespace) -> None:
         if classifier is not None:
             classifier_task = asyncio.create_task(classifier.run())
             logger.info("CsiClassifier wired into pipeline")
+        if uvicorn_server is not None:
+            await dashboard_state.start()
+            dashboard_task = asyncio.create_task(uvicorn_server.serve())
+            logger.info("Dashboard server started on port %d", args.dashboard_port)
         logger.info("Aggregator running on UDP port %d", args.port)
         await shutdown_event.wait()
     finally:
@@ -232,6 +278,24 @@ def main() -> None:
         type=str,
         default="",
         help='JSON config dict for CsiClassifier (e.g., \'{"model_path":"checkpoints/best.pth","scaler_path":"checkpoints/scaler.json"}\')',
+    )
+    parser.add_argument(
+        "--dashboard",
+        action="store_true",
+        default=False,
+        help="Enable web dashboard on port 8024",
+    )
+    parser.add_argument(
+        "--dashboard-port",
+        type=int,
+        default=8024,
+        help="Dashboard HTTP port (default: 8024)",
+    )
+    parser.add_argument(
+        "--dashboard-config",
+        type=str,
+        default="",
+        help='JSON config dict for dashboard',
     )
     parser.add_argument(
         "--log-level",

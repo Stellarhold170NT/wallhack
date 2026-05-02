@@ -85,6 +85,19 @@ def create_app(state: DashboardState) -> FastAPI:
     async def ws_endpoint(websocket: WebSocket) -> None:
         await manager.connect(websocket)
         try:
+            status = state.get_status()
+            payload = json.dumps(
+                {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "presence": status["presence"],
+                    "activity": status["activity"],
+                    "alerts": state.get_alerts(10),
+                    "node_health": status["node_health"],
+                    "heatmap": state.get_heatmap(),
+                },
+                default=lambda o: o.tolist() if hasattr(o, "tolist") else str(o),
+            )
+            await websocket.send_text(payload)
             while True:
                 await websocket.receive_text()
         except WebSocketDisconnect:
