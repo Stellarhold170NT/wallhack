@@ -2,8 +2,8 @@
 
 **Project:** ESP32-S3 CSI Wallhack
 **Milestone:** v1.0 — Basic Sensing Pipeline
-**Current Phase:** Phase 6 Context Gathered — Ready for Planning
-**Last Updated:** 2026-05-02 (post-context-gathering)
+**Current Phase:** Phase 6 Complete — v1.0 Milestone Ready for Verification
+**Last Updated:** 2026-05-02 (post-execution)
 
 ## Project Reference
 
@@ -21,7 +21,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-30)
 | 3: Signal Processing | ✓ Complete | SIG-03..SIG-06 | 4/4 |
 | 4: Presence & Intrusion | ✓ Complete | SEC-01..SEC-04 | 4/4 |
 | 5: Activity Recognition | ✓ Complete | ACT-01..ACT-05 | 5/5 |
-| 6: Dashboard & API | 🟡 Context gathered | UI-01..UI-05, API-01..API-02 | 0/7 |
+| 6: Dashboard & API | ✓ Complete | UI-01..UI-05, API-01..API-02 | 7/7 |
 
 ## Blockers
 
@@ -206,5 +206,20 @@ None at project start.
 - Artifact: `.planning/phases/06-dashboard-api/06-DISCUSSION-LOG.md`
 - Ready for Phase 6 planning
 
+**2026-05-02 — Phase 6 Execution Complete**
+- Executed 2 waves via ULW mode:
+  - Wave 1: FastAPI backend (DashboardState, WebSocket, REST) + Vanilla JS frontend (Canvas 2D, 5-panel grid)
+  - Wave 2: Aggregator CLI wiring (`--dashboard` flag) + integration tests
+- Files created:
+  - `dashboard/__init__.py` — Package init
+  - `dashboard/state.py` — DashboardState queue consumer with presence/activity/alerts/heatmap state
+  - `dashboard/app.py` — FastAPI app with WebSocket /ws, REST /status /alerts, static files
+  - `dashboard/static/index.html` — Single-page dashboard (377 lines, zero deps)
+  - `tests/test_dashboard.py` — 4 tests (state consumption, REST, WebSocket)
+- Tests: 93/93 passed (89 core + 4 dashboard)
+- Decisions implemented: D-44..D-50 all covered
+- Artifacts: `.planning/phases/06-dashboard-api/06-0{1,2,3}-SUMMARY.md`
+- v1.0 milestone complete: all 6 phases executed, 27/27 requirements satisfied
+
 ---
-*Last updated: 2026-05-02 after Phase 6 context gathering*
+*Last updated: 2026-05-02 after Phase 6 execution*

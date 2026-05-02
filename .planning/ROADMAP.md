@@ -200,7 +200,7 @@ Plans:
 **Requirements:** UI-01..UI-05, API-01..API-02
 
 **Success Criteria:**
-1. Browser loads dashboard at `http://localhost:8080` and shows CSI amplitude heatmap updating every 0.5s
+1. Browser loads dashboard at `http://localhost:8024` and shows CSI amplitude heatmap updating every 0.5s
 2. Presence indicator changes color within 2 seconds of state change
 3. Activity label updates with confidence bar; matches classifier output
 4. Alert panel displays intrusion events with timestamp and node ID
@@ -220,9 +220,9 @@ Plans:
 **Plans:** 3 plans
 
 Plans:
-- [ ] 06-01-PLAN.md — FastAPI backend with WebSocket, REST endpoints, and DashboardState queue consumer
-- [ ] 06-02-PLAN.md — Vanilla JS + Canvas 2D frontend with 5-panel grid layout
-- [ ] 06-03-PLAN.md — Aggregator CLI wiring (--dashboard flag) and integration tests
+- [x] 06-01-PLAN.md — FastAPI backend with WebSocket, REST endpoints, and DashboardState queue consumer
+- [x] 06-02-PLAN.md — Vanilla JS + Canvas 2D frontend with 5-panel grid layout
+- [x] 06-03-PLAN.md — Aggregator CLI wiring (--dashboard flag) and integration tests
 
 ---
 
