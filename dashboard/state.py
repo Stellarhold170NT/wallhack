@@ -50,7 +50,8 @@ class DashboardState:
             asyncio.create_task(self._consume_activity()),
             asyncio.create_task(self._consume_amplitude()),
         ]
-        await asyncio.gather(*self._tasks, return_exceptions=True)
+        # Do NOT await gather here, as these are infinite loops.
+        # They will run in the background.
 
     async def _consume_alerts(self) -> None:
         while not self._shutdown.is_set():

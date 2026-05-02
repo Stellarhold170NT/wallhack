@@ -220,6 +220,12 @@ async def run_server(args: argparse.Namespace) -> None:
         pass
 
     try:
+        # Start dashboard first if enabled
+        if uvicorn_server is not None:
+            await dashboard_state.start()
+            dashboard_task = asyncio.create_task(uvicorn_server.serve())
+            logger.info("Dashboard server started on port %d", args.dashboard_port)
+
         await server.start()
         consumer_task = asyncio.create_task(consumer())
         if processor is not None:
@@ -231,10 +237,7 @@ async def run_server(args: argparse.Namespace) -> None:
         if classifier is not None:
             classifier_task = asyncio.create_task(classifier.run())
             logger.info("CsiClassifier wired into pipeline")
-        if uvicorn_server is not None:
-            await dashboard_state.start()
-            dashboard_task = asyncio.create_task(uvicorn_server.serve())
-            logger.info("Dashboard server started on port %d", args.dashboard_port)
+            
         logger.info("Aggregator running on UDP port %d", args.port)
         await shutdown_event.wait()
     finally:

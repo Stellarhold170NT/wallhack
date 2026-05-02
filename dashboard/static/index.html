@@ -3,375 +3,358 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ESP32-S3 CSI Wallhack Dashboard</title>
+<title>ESP32-S3 CSI Monitor</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 * { box-sizing: border-box; }
 body {
   margin: 0;
-  padding: 10px;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #0f172a;
-  color: #e2e8f0;
+  padding: 0;
+  font-family: "IBM Plex Sans", sans-serif;
+  background: #121212;
+  color: #d1d5db;
   height: 100vh;
   overflow: hidden;
 }
-#connection-status {
-  position: fixed;
-  top: 10px;
-  right: 10px;
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 600;
-  z-index: 100;
+
+/* Custom Slim Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-#connection-status.connected { background: #22c55e; color: #fff; }
-#connection-status.reconnecting { background: #eab308; color: #000; }
-#connection-status.disconnected { background: #ef4444; color: #fff; }
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+/* Header with Logo */
+header {
+  height: 60px;
+  background: #1c1c1c;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  border-bottom: 1px solid #2d2d2d;
+  justify-content: space-between;
+}
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.logo-container img {
+  max-height: 28px;
+  filter: drop-shadow(0 0 5px rgba(255,255,255,0.1));
+}
+.logo-container h1 {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: 1px;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+#connection-status {
+  padding: 5px 15px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+#connection-status.connected { background: #064e3b; color: #34d399; border: 1px solid #065f46; }
+#connection-status.reconnecting { background: #451a03; color: #fbbf24; border: 1px solid #78350f; }
+#connection-status.disconnected { background: #450a0a; color: #f87171; border: 1px solid #7f1d1d; }
+
+.dashboard-content {
+  padding: 15px;
+  height: calc(100vh - 60px);
+}
 .grid {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: 2.8fr 1fr;
   grid-template-rows: 2fr 1fr 1fr;
-  gap: 10px;
-  height: calc(100vh - 20px);
+  gap: 15px;
+  height: 100%;
 }
 .panel {
-  background: #1e293b;
-  border-radius: 8px;
-  padding: 12px;
+  background: #1c1c1c; /* Matte Gray/Black Panel */
+  border-radius: 6px;
+  padding: 15px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border: 1px solid #2d2d2d;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
 }
 .panel h2 {
-  margin: 0 0 8px 0;
+  margin: 0 0 15px 0;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: #9ca3af; /* Brightened for better contrast */
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel h2::before { content: ''; display: inline-block; width: 4px; height: 4px; background: #60a5fa; border-radius: 50%; }
+
+.heatmap-panel { grid-row: 1 / 3; grid-column: 1; overflow-y: auto; }
+
+.node-block { margin-bottom: 35px; }
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 0 5px;
+}
+.node-title {
   font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  color: #94a3b8;
 }
-.heatmap-panel { grid-row: 1 / 3; grid-column: 1; }
-.presence-panel { grid-row: 1; grid-column: 2; }
-.activity-panel { grid-row: 2; grid-column: 2; }
-.alerts-panel { grid-row: 3; grid-column: 1; }
-.health-panel { grid-row: 3; grid-column: 2; }
-#heatmap {
-  width: 100%;
-  height: 100%;
-  background: #020617;
-  border-radius: 4px;
-}
-.presence-indicator {
+.node-stats {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
   gap: 8px;
 }
+.stat-badge {
+  padding: 2px 8px;
+  background: #262626;
+  border: 1px solid #333;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+  color: #9ca3af;
+  display: flex;
+  gap: 5px;
+}
+.stat-badge span { color: #60a5fa; }
+.stat-badge.rssi span { color: #4ade80; } /* Green for signal */
+.stat-badge.stability span { color: #facc15; } /* Yellow for stability */
+
+.heatmap-layout {
+  display: flex;
+  height: 250px;
+  gap: 15px;
+  align-items: center;
+}
+.canvas-container {
+  flex: 1;
+  height: 100%;
+  background: #000;
+  border: 1px solid #2d2d2d;
+  border-radius: 2px;
+}
+canvas.node-canvas { width: 100%; height: 100%; display: block; }
+
+.colorbar-container { display: flex; height: 100%; align-items: center; gap: 8px; }
+.colorbar-scale {
+  width: 12px;
+  height: 90%;
+  background: linear-gradient(to top, #000080, #0000ff, #00ffff, #ffff00, #ff0000, #800000);
+  border: 1px solid #333;
+}
+.colorbar-ticks {
+  display: flex; flex-direction: column; justify-content: space-between; height: 90%;
+  font-size: 9px; color: #9ca3af; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.colorbar-label { writing-mode: vertical-lr; transform: rotate(180deg); font-size: 10px; color: #9ca3af; font-weight: 600; }
+
+.presence-indicator { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
 .presence-circle {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  transition: background 0.3s;
+  width: 80px; height: 80px; border-radius: 50%; margin-bottom: 20px;
+  transition: all 0.6s ease;
 }
-.presence-circle.empty { background: #22c55e; }
-.presence-circle.occupied { background: #ef4444; }
-.presence-circle.unknown { background: #64748b; }
-.presence-label {
-  font-size: 18px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-.activity-display {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  height: 100%;
-  gap: 8px;
-}
-.activity-label {
-  font-size: 24px;
-  font-weight: 700;
-  text-align: center;
-}
-.confidence-bar-outer {
-  width: 100%;
-  height: 20px;
-  background: #334155;
-  border-radius: 4px;
-  overflow: hidden;
-}
-.confidence-bar-inner {
-  height: 100%;
-  background: #3b82f6;
-  transition: width 0.3s;
-}
-.confidence-text {
-  text-align: center;
-  font-size: 12px;
-  color: #94a3b8;
-}
-.alerts-list {
-  overflow-y: auto;
-  max-height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.alert-item {
-  padding: 6px 8px;
-  border-radius: 4px;
-  background: #334155;
-  font-size: 12px;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.alert-item.intrusion { background: #7f1d1d; }
-.alert-time { color: #94a3b8; white-space: nowrap; }
-.alert-node { background: #475569; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
-.alert-type { font-weight: 600; }
-.health-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12px;
-}
-.health-table th {
-  text-align: left;
-  padding: 4px;
-  color: #94a3b8;
-  border-bottom: 1px solid #334155;
-}
-.health-table td {
-  padding: 4px;
-  border-bottom: 1px solid #334155;
-}
-.health-status.online { color: #22c55e; }
-.health-status.stale { color: #ef4444; }
-@media (max-width: 900px) {
-  .grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto;
-    height: auto;
-    overflow-y: auto;
-  }
-  .heatmap-panel { grid-row: auto; grid-column: auto; min-height: 300px; }
-  .presence-panel { grid-row: auto; grid-column: auto; }
-  .activity-panel { grid-row: auto; grid-column: auto; }
-  .alerts-panel { grid-row: auto; grid-column: auto; }
-  .health-panel { grid-row: auto; grid-column: auto; }
-}
+.presence-circle.empty { background: #064e3b; border: 4px solid #065f46; box-shadow: 0 0 20px rgba(52, 211, 153, 0.1); }
+.presence-circle.occupied { background: #450a0a; border: 4px solid #7f1d1d; box-shadow: 0 0 30px rgba(239, 68, 68, 0.2); }
+.presence-circle.unknown { background: #1f2937; border: 4px solid #374151; }
+.presence-label { font-size: 16px; font-weight: 800; color: #fff; letter-spacing: 2px; }
+
+.activity-display { display: flex; flex-direction: column; justify-content: center; height: 100%; text-align: center; }
+.activity-label { font-size: 42px; font-weight: 900; color: #fff; margin-bottom: 10px; letter-spacing: -1px; }
+.confidence-bar-outer { width: 70%; margin: 0 auto; height: 4px; background: #2d2d2d; border-radius: 2px; overflow: hidden; }
+.confidence-bar-inner { height: 100%; background: #3b82f6; }
+
+.alert-item { padding: 12px; border-radius: 4px; background: #181818; font-size: 11px; margin-bottom: 6px; display: flex; gap: 15px; border: 1px solid #262626; }
+.alert-item.intrusion { border-left: 3px solid #ef4444; background: #2a0a0a; }
+.health-table { width: 100%; font-size: 11px; border-collapse: collapse; }
+.health-table th { text-align: left; padding: 10px; color: #9ca3af; border-bottom: 1px solid #2d2d2d; }
+.health-table td { padding: 10px; border-bottom: 1px solid #2d2d2d; color: #e5e7eb; }
 </style>
 </head>
 <body>
-<div id="connection-status" class="disconnected">Disconnected</div>
-<div class="grid">
-  <div class="panel heatmap-panel"><h2>CSI Heatmap</h2><canvas id="heatmap"></canvas></div>
-  <div class="panel presence-panel"><h2>Presence</h2><div id="presence"></div></div>
-  <div class="panel activity-panel"><h2>Activity</h2><div id="activity"></div></div>
-  <div class="panel alerts-panel"><h2>Alerts</h2><div id="alerts" class="alerts-list"></div></div>
-  <div class="panel health-panel"><h2>Node Health</h2><div id="health"></div></div>
+<header>
+  <div class="logo-container">
+    <img src="logo.svg" alt="Logo">
+    <h1>ESP32 CSI Monitor</h1>
+  </div>
+  <div id="connection-status" class="disconnected">Offline</div>
+</header>
+<div class="dashboard-content">
+  <div class="grid">
+    <div class="panel heatmap-panel">
+      <h2>Heatmap Waterfall</h2>
+      <div id="nodes-container"></div>
+    </div>
+    <div class="panel presence-panel"><h2>Detection</h2><div id="presence" class="presence-indicator"></div></div>
+    <div class="panel activity-panel"><h2>Activity</h2><div id="activity" class="activity-display"></div></div>
+    <div class="panel alerts-panel"><h2>Events</h2><div id="alerts" style="overflow-y:auto"></div></div>
+    <div class="panel health-panel"><h2>Nodes</h2><div id="health"></div></div>
+  </div>
 </div>
 <script>
 const WS_URL = `ws://${window.location.host}/ws`;
-const RECONNECT_BASE = 1000;
-const RECONNECT_MAX = 30000;
-const state = { ws: null, reconnectAttempts: 0, reconnectTimer: null };
+const state = { ws: null, canvases: {} };
+
+function getJetColor(v) {
+  v = Math.max(0, Math.min(1, v));
+  const r = v < 0.35 ? 0 : v < 0.66 ? 255 * (v - 0.35) / 0.31 : 255;
+  const g = v < 0.125 ? 0 : v < 0.375 ? 255 * (v - 0.125) / 0.25 : v < 0.64 ? 255 : v < 0.91 ? 255 * (1 - (v - 0.64) / 0.27) : 0;
+  const b = v < 0.11 ? 128 + 128 * (v / 0.11) : v < 0.34 ? 255 : v < 0.65 ? 255 * (1 - (v - 0.34) / 0.31) : 0;
+  return `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
+}
 
 function connect() {
   state.ws = new WebSocket(WS_URL);
-  state.ws.onopen = () => {
-    state.reconnectAttempts = 0;
-    setConnectionStatus('connected', 'Connected');
-  };
-  state.ws.onmessage = (ev) => {
-    try {
-      const data = JSON.parse(ev.data);
-      updatePanels(data);
-    } catch (e) {
-      console.error('WS parse error', e);
-    }
-  };
-  state.ws.onclose = () => {
-    setConnectionStatus('disconnected', 'Disconnected');
-    scheduleReconnect();
-  };
-  state.ws.onerror = (e) => {
-    console.error('WS error', e);
-  };
-}
-
-function scheduleReconnect() {
-  if (state.reconnectTimer) return;
-  setConnectionStatus('reconnecting', 'Reconnecting...');
-  const delay = Math.min(RECONNECT_BASE * 2 ** state.reconnectAttempts, RECONNECT_MAX);
-  state.reconnectAttempts++;
-  state.reconnectTimer = setTimeout(() => {
-    state.reconnectTimer = null;
-    connect();
-  }, delay);
+  state.ws.onopen = () => setConnectionStatus('connected', 'Live');
+  state.ws.onmessage = (ev) => { try { updatePanels(JSON.parse(ev.data)); } catch (e) {} };
+  state.ws.onclose = () => { setConnectionStatus('disconnected', 'Offline'); setTimeout(connect, 2000); };
 }
 
 function setConnectionStatus(cls, text) {
   const el = document.getElementById('connection-status');
-  el.className = cls;
-  el.textContent = text;
+  el.className = cls; el.textContent = text;
 }
 
 function updatePanels(data) {
-  updateHeatmap(data.heatmap);
+  if (data.heatmap) updateHeatmaps(data.heatmap);
   updatePresence(data.presence);
   updateActivity(data.activity);
   updateAlerts(data.alerts);
   updateHealth(data.node_health);
 }
 
-function updateHeatmap(heatmapData) {
-  const canvas = document.getElementById('heatmap');
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-  const w = rect.width;
-  const h = rect.height;
-  ctx.clearRect(0, 0, w, h);
-
-  if (!heatmapData) return;
-  const nodes = Object.keys(heatmapData);
-  if (nodes.length === 0) return;
-
-  const nid = nodes[0];
-  const frames = heatmapData[nid];
-  if (!frames || frames.length === 0) return;
-
-  const rows = frames[0].length;
-  const cols = frames.length;
-
-  let minVal = Infinity, maxVal = -Infinity;
-  for (let x = 0; x < cols; x++) {
-    for (let y = 0; y < rows; y++) {
-      const v = frames[x][y];
-      if (v < minVal) minVal = v;
-      if (v > maxVal) maxVal = v;
+function updateHeatmaps(heatmapData) {
+  const container = document.getElementById('nodes-container');
+  Object.keys(heatmapData).forEach(nid => {
+    if (!state.canvases[nid]) {
+      const nodeBlock = document.createElement('div');
+      nodeBlock.className = 'node-block';
+      nodeBlock.innerHTML = `
+        <div class="node-header">
+          <div class="node-title">NODE_${nid}_DATA_STREAM</div>
+          <div id="stats-${nid}" style="font-size:10px; color:#9ca3af; font-family:monospace; font-weight:600"></div>
+        </div>
+        <div class="heatmap-layout">
+          <div class="canvas-container"><canvas class="node-canvas"></canvas></div>
+          <div class="colorbar-container">
+            <div class="colorbar-scale"></div>
+            <div class="colorbar-ticks">
+              <span>30</span><span>20</span><span>10</span><span>0</span>
+            </div>
+            <div class="colorbar-label">Amplitude</div>
+          </div>
+        </div>
+      `;
+      container.appendChild(nodeBlock);
+      state.canvases[nid] = nodeBlock.querySelector('canvas');
     }
-  }
-  if (minVal === maxVal) { minVal = 0; maxVal = 1; }
 
-  const cellW = w / cols;
-  const cellH = h / rows;
-
-  for (let x = 0; x < cols; x++) {
-    for (let y = 0; y < rows; y++) {
-      const v = (frames[x][y] - minVal) / (maxVal - minVal);
-      ctx.fillStyle = getColor(v);
-      ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+    const canvas = state.canvases[nid];
+    const frames = heatmapData[nid];
+    if (frames.length > 0) {
+      const lastFrame = frames[frames.length - 1];
+      const avgAmp = lastFrame.reduce((a, b) => a + b, 0) / lastFrame.length;
+      const variance = lastFrame.reduce((a, b) => a + Math.abs(b - avgAmp), 0) / lastFrame.length;
+      const stability = Math.max(0, 100 - (variance * 5));
+      document.getElementById(`stats-${nid}`).textContent = `RSSI: -45dBm | AMP: ${avgAmp.toFixed(1)}dB | STB: ${Math.round(stability)}%`;
     }
-  }
-}
 
-function getColor(t) {
-  if (t < 0.33) {
-    const p = t / 0.33;
-    return `rgb(${Math.round(p * 0)}, ${Math.round(p * 255)}, ${Math.round(255 * (1 - p) + p * 0)})`;
-  } else if (t < 0.66) {
-    const p = (t - 0.33) / 0.33;
-    return `rgb(${Math.round(p * 255)}, 255, 0)`;
-  } else {
-    const p = (t - 0.66) / 0.34;
-    return `rgb(255, ${Math.round(255 * (1 - p))}, 0)`;
-  }
+    const ctx = canvas.getContext('2d');
+    const rect = canvas.parentNode.getBoundingClientRect();
+    canvas.width = rect.width; canvas.height = rect.height;
+
+    const rows = 64;
+    const cols = frames.length;
+    const cellW = canvas.width / cols;
+    const cellH = canvas.height / rows;
+
+    frames.forEach((frame, x) => {
+      frame.forEach((val, y) => {
+        if (y >= rows) return;
+        ctx.fillStyle = getJetColor(val / 30);
+        ctx.fillRect(x * cellW, y * cellH, cellW + 1, cellH + 1);
+      });
+    });
+  });
 }
 
 function updatePresence(presence) {
   const container = document.getElementById('presence');
-  if (!presence || Object.keys(presence).length === 0) {
-    container.innerHTML = '<div class="presence-indicator"><div class="presence-circle unknown"></div><div class="presence-label">UNKNOWN</div></div>';
-    return;
-  }
-  let html = '';
-  for (const [nid, status] of Object.entries(presence)) {
-    const cls = status === 'occupied' ? 'occupied' : status === 'empty' ? 'empty' : 'unknown';
-    html += `<div class="presence-indicator"><div class="presence-circle ${cls}"></div><div class="presence-label">Node ${nid}: ${status}</div></div>`;
-  }
-  container.innerHTML = html;
+  // Prioritize 'system' state, otherwise take the first node state
+  const statusKey = presence.hasOwnProperty('system') ? 'system' : Object.keys(presence)[0];
+  if (!statusKey) return;
+  
+  const status = presence[statusKey];
+  const cls = status === 'occupied' ? 'occupied' : status === 'empty' ? 'empty' : 'unknown';
+  
+  container.innerHTML = `
+    <div class="presence-circle ${cls}"></div>
+    <div class="presence-label">${status.toUpperCase()}</div>
+    <div style="font-size:10px; color:#6b7280; margin-top:5px">${statusKey === 'system' ? 'SYSTEM STATUS' : 'NODE ' + statusKey}</div>
+  `;
 }
 
 function updateActivity(activity) {
   const container = document.getElementById('activity');
-  if (!activity) {
-    container.innerHTML = '<div class="activity-display"><div class="activity-label">No activity detected</div></div>';
-    return;
-  }
-  const nodes = Object.keys(activity);
-  let selected = null;
-  for (const nid of nodes) {
-    const a = activity[nid];
-    if (a && a.label) { selected = a; break; }
-  }
-  if (!selected) {
-    container.innerHTML = '<div class="activity-display"><div class="activity-label">No activity detected</div></div>';
-    return;
-  }
-  const pct = Math.round((selected.confidence || 0) * 100);
+  const nid = Object.keys(activity)[0];
+  if (!nid || !activity[nid]) return;
+  const a = activity[nid];
+  const pct = Math.round(a.confidence * 100);
   container.innerHTML = `
-    <div class="activity-display">
-      <div class="activity-label">${selected.label.toUpperCase()}</div>
-      <div class="confidence-bar-outer"><div class="confidence-bar-inner" style="width:${pct}%"></div></div>
-      <div class="confidence-text">Confidence: ${pct}%</div>
-    </div>`;
+    <div class="activity-label">${a.label.toUpperCase()}</div>
+    <div class="confidence-bar-outer"><div class="confidence-bar-inner" style="width:${pct}%"></div></div>
+    <div style="font-size:10px; margin-top:10px; color:#444; font-weight:bold">CONFIDENCE: ${pct}%</div>
+  `;
 }
 
 function updateAlerts(alerts) {
   const container = document.getElementById('alerts');
-  if (!alerts || alerts.length === 0) {
-    container.innerHTML = '<div style="color:#64748b;font-size:12px;">No alerts</div>';
-    return;
-  }
-  let html = '';
-  for (const alert of alerts.slice(0, 10)) {
-    const ts = alert.timestamp ? new Date(alert.timestamp).toLocaleTimeString() : '—';
-    const typeClass = alert.type === 'intrusion' ? 'intrusion' : '';
-    html += `<div class="alert-item ${typeClass}">
-      <span class="alert-time">${ts}</span>
-      <span class="alert-node">Node ${alert.node_id}</span>
-      <span class="alert-type">${alert.type}</span>
-    </div>`;
-  }
-  container.innerHTML = html;
+  container.innerHTML = (alerts || []).slice(0, 10).map(a => `
+    <div class="alert-item ${a.type === 'intrusion' ? 'intrusion' : ''}">
+      <span style="color:#555">${new Date(a.timestamp).toLocaleTimeString()}</span>
+      <b style="color:#3b82f6">N${a.node_id}</b>
+      <span>${a.type.toUpperCase()}</span>
+    </div>
+  `).join('');
 }
 
 function updateHealth(health) {
   const container = document.getElementById('health');
-  if (!health || Object.keys(health).length === 0) {
-    container.innerHTML = '<div style="color:#64748b;font-size:12px;">No nodes connected</div>';
-    return;
-  }
-  let html = '<table class="health-table"><tr><th>Node</th><th>FPS</th><th>Status</th></tr>';
-  for (const [nid, info] of Object.entries(health)) {
-    const status = info.stale ? 'STALE' : 'ONLINE';
-    const statusClass = info.stale ? 'stale' : 'online';
-    html += `<tr><td>${nid}</td><td>${Math.round(info.fps || 0)}</td><td class="health-status ${statusClass}">${status}</td></tr>`;
-  }
-  html += '</table>';
-  container.innerHTML = html;
+  container.innerHTML = `<table class="health-table">
+    <tr><th>NODE</th><th>FPS</th><th>LINK</th></tr>
+    ${Object.entries(health).map(([nid, info]) => `
+      <tr><td><b>${nid}</b></td><td>${Math.round(info.fps)}</td><td style="color:${info.stale ? '#ef4444' : '#059669'}">${info.stale ? 'LOST' : 'OK'}</td></tr>
+    `).join('')}
+  </table>`;
 }
 
-function resizeCanvas() {
-  const canvas = document.getElementById('heatmap');
-  if (!canvas) return;
-}
-
-window.addEventListener('resize', resizeCanvas);
-document.addEventListener('DOMContentLoaded', () => {
-  resizeCanvas();
-  fetch('/status')
-    .then(r => r.json())
-    .then(updatePanels)
-    .catch(e => console.error('Initial fetch failed', e));
-  connect();
-});
+document.addEventListener('DOMContentLoaded', connect);
+</script>
+</body>
+</html>
 </script>
 </body>
 </html>
