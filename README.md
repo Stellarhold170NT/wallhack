@@ -80,6 +80,10 @@ python -m processor --input data/raw/node_1_record.npy
 $env:PYTHONPATH="."; pytest tests/
 ```
 
+
+<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/c679775e-9734-4f29-8380-bbe0b7cd1768" />
+
+
 ### Xem dữ liệu (Visualizer)
 Dùng script để xem bản đồ nhiệt (Heatmap):
 ```powershell
