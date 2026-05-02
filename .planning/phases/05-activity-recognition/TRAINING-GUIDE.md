@@ -260,4 +260,46 @@ python -m classifier.train --data-dir data/activities/ --cross-validate
 
 # 5. Run real-time
 python -m aggregator --port 5005 --classifier-config '{"model_path":"models/activity/model.pth"}'
+
+# 6. Quy trình huấn luyện hoàn chỉnh (End-to-End Flow)
+
+Dưới đây là tóm tắt các lệnh cần chạy để hoàn thiện hệ thống từ lúc thu thập đến khi chạy thực tế.
+
+### Bước 1: Thu thập dữ liệu ESP32 (3-5 phút mỗi nhãn)
+Chạy lần lượt các lệnh sau cho 6 nhãn:
+```powershell
+python -m classifier.collect --label walking --output-dir data/activities/walking --duration 300
+python -m classifier.collect --label running --output-dir data/activities/running --duration 300
+python -m classifier.collect --label lying --output-dir data/activities/lying --duration 300
+python -m classifier.collect --label falling --output-dir data/activities/falling --duration 300
+python -m classifier.collect --label sitting --output-dir data/activities/sitting --duration 180
+python -m classifier.collect --label standing --output-dir data/activities/standing --duration 180
+```
+
+### Bước 2: Kiểm chứng đặc trưng (PCA Analysis)
+Kiểm tra xem dữ liệu có bị nhiễu quá không trước khi train:
+```powershell
+python -m classifier.verify
+```
+
+### Bước 3: Huấn luyện tiền đề (Pre-training với HAR)
+Xây dựng "nền tảng tri thức" cho mô hình từ bộ dữ liệu chuẩn (IEEE HAR):
+```powershell
+python -m classifier.train --har-dir "llm-wiki/raw/HAR" --output-dir models/activity --epochs 100
+```
+
+### Bước 4: Huấn luyện tinh chỉnh (Fine-tuning với ESP32)
+Dạy mô hình hiểu môi trường thực tế của bạn:
+```powershell
+python -m classifier.train --data-dir data/activities --pretrained models/activity/pretrain_har.pth --output-dir models/activity --epochs 50 --fine-tune
+```
+
+### Bước 5: Chạy nhận diện thực tế (Real-time Inference)
+Chạy hệ thống tổng hợp để xem kết quả:
+```powershell
+python -m aggregator --port 5005 --log-level INFO --processor-config "{\"window_size\":30,\"step_size\":15}" --detector-config "{\"enter_threshold_sigma\":2.5,\"exit_threshold_sigma\":1.5,\"enter_frames\":2,\"exit_frames\":5,\"baseline_alpha\":0.15}" --classifier-config "{\"model_path\":\"models/activity/model.pth\",\"scaler_path\":\"models/activity/activity_scaler.json\",\"confidence_threshold\":0.6}"
+```
+
+---
+*Ghi chú: Nếu hệ thống bị nhảy nhãn FALLING vô lý do nhiễu băng thông, hãy cân nhắc thêm bộ lọc Voting hoặc kiểm soát vị trí đặt thiết bị.*
 ```
