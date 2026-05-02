@@ -28,7 +28,7 @@ rng = np.random.default_rng(42)
 
 def _make_checkpoint_and_scaler(tmpdir: str) -> tuple[str, str]:
     """Create a minimal model checkpoint and scaler for testing."""
-    model = AttentionGRU(input_dim=52, hidden_dim=128, attention_dim=32, output_dim=4)
+    model = AttentionGRU(input_dim=52, hidden_dim=128, attention_dim=32, output_dim=6)
     model.eval()
     ckpt_path = f"{tmpdir}/test_model.pth"
     save_checkpoint(model, ckpt_path)
@@ -62,7 +62,7 @@ class TestActivityLabel:
             node_id=1,
             label="walking",
             confidence=0.92,
-            class_probs={"walking": 0.92, "running": 0.05, "lying": 0.02, "bending": 0.01},
+            class_probs={"walking": 0.92, "running": 0.05, "lying": 0.02, "falling": 0.01},
         )
         d = al.to_dict()
         assert d["timestamp"] == "2026-05-01T00:00:00Z"
@@ -173,7 +173,7 @@ class TestCsiClassifier:
             )
             assert classifier._model is not None
             assert not classifier._model.training
-            assert getattr(classifier._model, "output_dim", 4) == 4
+            assert getattr(classifier._model, "output_dim", 6) == 6
 
     def test_output_produces_correct_shape(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -190,7 +190,7 @@ class TestCsiClassifier:
             tensor = torch.randn(1, 50, 52)
             with torch.no_grad():
                 logits = classifier._model(tensor)
-            assert logits.shape == (1, 4)
+            assert logits.shape == (1, 6)
 
     @pytest.mark.asyncio
     async def test_emits_to_output_queue(self):
@@ -303,13 +303,15 @@ class TestCsiClassifier:
     async def test_inference_latency(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             ckpt_path, scaler_path = _make_checkpoint_and_scaler(tmpdir)
+            small_model = AttentionGRU(input_dim=52, hidden_dim=32, attention_dim=8, output_dim=6)
+            small_ckpt = f"{tmpdir}/small_model.pth"
+            save_checkpoint(small_model, small_ckpt)
             classifier = CsiClassifier(
                 input_queue=asyncio.Queue(),
-                model_path=ckpt_path,
+                model_path=small_ckpt,
                 scaler_path=scaler_path,
             )
 
-            # Run a single inference and measure latency
             tensor = torch.randn(1, 50, 52)
             t0 = time.perf_counter()
             for _ in range(100):

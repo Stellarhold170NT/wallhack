@@ -44,7 +44,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "mixup_alpha": 1.0,
     "val_split": 0.2,
     "n_splits": 5,
-    "num_classes": 7,
+    "num_classes": 6,
     "input_dim": 52,
     "timesteps": 50,
     "hidden_dim": 128,
@@ -106,7 +106,8 @@ def train_model(
                 X_np = inputs.cpu().numpy()
                 y_np = labels.cpu().numpy()
                 X_mix, y_mix = mixup_augment(
-                    X_np, y_np, alpha=cfg["mixup_alpha"], prob=1.0
+                    X_np, y_np, alpha=cfg["mixup_alpha"], prob=1.0,
+                    num_classes=cfg.get("num_classes", 6)
                 )
                 inputs = torch.from_numpy(X_mix.astype(np.float32)).to(device)
                 targets = torch.from_numpy(y_mix.astype(np.float32)).to(device)
@@ -236,9 +237,9 @@ def finetune_esp32(
     device: torch.device,
     config: dict[str, Any] | None = None,
 ) -> tuple[nn.Module, dict[str, Any]]:
-    """Fine-tune on ESP32 data with 7-class output (D-35).
+    """Fine-tune on ESP32 data with 6-class output (D-35).
 
-    Replaces the final FC layer with a 7-class head, applies
+    Replaces the final FC layer with a 6-class head, applies
     augmentation, and trains.
 
     Returns (fine_tuned_model, history).
@@ -269,6 +270,7 @@ def finetune_esp32(
     hidden_dim = model.hidden_dim
     old_fc = model.fc
     model.fc = nn.Linear(hidden_dim, cfg["num_classes"]).to(device)
+    model.output_dim = cfg["num_classes"]
 
     if old_fc.out_features >= cfg["num_classes"]:
         with torch.no_grad():
@@ -373,7 +375,7 @@ def save_checkpoint(
         "input_dim": getattr(model, "input_dim", 52),
         "hidden_dim": getattr(model, "hidden_dim", 128),
         "attention_dim": getattr(model, "attention_dim", 32),
-        "output_dim": getattr(model, "output_dim", 4),
+        "output_dim": getattr(model, "output_dim", 6),
     }
     torch.save(checkpoint, p)
 
@@ -438,7 +440,17 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument(
         "--output-dir",
         default="models/activity",
-        help="Output directory for checkpoints (default: models/activity)",
+        help="Directory to save models (default: models/activity)",
+    )
+    parser.add_argument(
+        "--pretrained",
+        type=str,
+        help="Path to a pre-trained model checkpoint (e.g., pretrain_har.pth)",
+    )
+    parser.add_argument(
+        "--fine-tune",
+        action="store_true",
+        help="Enable fine-tuning mode (loads --pretrained and trains on --data-dir)",
     )
     parser.add_argument(
         "--epochs", type=int, default=100, help="Max training epochs (default: 100)"
@@ -522,13 +534,18 @@ def main(argv: list[str] | None = None) -> None:
         )
         logger.info("Pre-train checkpoint saved to %s", output_dir / "pretrain_har.pth")
 
+    # Load or initialize model
+    if args.pretrained:
+        logger.info("Loading pre-trained model from %s", args.pretrained)
+        model, meta = load_checkpoint(args.pretrained, device=device)
+    elif model is None:
+        model = AttentionGRU(52, 128, 32, output_dim=6).to(device)
+
     # Fine-tune on ESP32 data
     if args.data_dir:
-        if model is None:
-            model = AttentionGRU(52, 128, 32, output_dim=6).to(device)
 
         logger.info("=== ESP32 fine-tuning ===")
-        model, hist = finetune_esp32(model, args.data_dir, device, {**cfg, "num_classes": 7})
+        model, hist = finetune_esp32(model, args.data_dir, device, {**cfg, "num_classes": 6})
 
         scaler_path = output_dir / "activity_scaler.json"
         ds = Esp32Dataset(args.data_dir)

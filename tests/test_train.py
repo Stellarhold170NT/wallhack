@@ -133,7 +133,7 @@ class TestOutputShapes:
             assert model.fc.out_features == 6
             assert "best_val_acc" in hist
 
-    def test_finetune_produces_7class(self):
+    def test_finetune_produces_6class(self):
         from classifier.train import finetune_esp32
         import warnings
         with warnings.catch_warnings():
@@ -141,7 +141,7 @@ class TestOutputShapes:
 
             with tempfile.TemporaryDirectory() as tmp:
                 root = pathlib.Path(tmp)
-                for label in ["walking", "running", "lying", "bending", "falling", "sitting", "standing"]:
+                for label in ["walking", "running", "lying", "falling", "sitting", "standing"]:
                     (root / label).mkdir()
                     data = rng.standard_normal((3, 50, 52)).astype(np.float32)
                     np.save(root / label / "a.npy", data)
@@ -152,7 +152,7 @@ class TestOutputShapes:
                     model, str(tmp), device,
                     config={"epochs": 2, "augment": False, "batch_size": 4, "hidden_dim": 32, "attention_dim": 8},
                 )
-                assert model.fc.out_features == 7
+                assert model.fc.out_features == 6
                 assert "best_val_acc" in hist
 
 

@@ -86,6 +86,7 @@ def mixup_augment(
     y: np.ndarray,
     alpha: float = 1.0,
     prob: float = 0.3,
+    num_classes: int | None = None,
     rng: np.random.Generator | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """MixUp augmentation — randomly mixes sample pairs.
@@ -104,6 +105,7 @@ def mixup_augment(
         y: Labels shape (samples,) — integer class indices.
         alpha: Beta distribution parameter (default 1.0 = uniform mixing).
         prob: Probability of applying MixUp to each sample (default 0.3).
+        num_classes: Number of output classes (default: inferred from y.max()+1).
         rng: Optional numpy Generator for reproducibility.
 
     Returns:
@@ -113,7 +115,8 @@ def mixup_augment(
     if rng is None:
         rng = np.random.default_rng()
 
-    num_classes = int(y.max()) + 1
+    if num_classes is None:
+        num_classes = int(y.max()) + 1
     y_onehot = np.eye(num_classes)[y.astype(int)]
 
     X_out = X.copy()

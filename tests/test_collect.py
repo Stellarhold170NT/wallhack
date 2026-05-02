@@ -43,7 +43,7 @@ class TestCsiCollectorInit:
             CsiCollector(label="jumping", duration=30)
 
     def test_all_valid_labels_accepted(self):
-        for label in ["walking", "running", "lying", "bending", "falling", "sitting", "standing"]:
+        for label in ["walking", "running", "lying", "falling", "sitting", "standing"]:
             collector = CsiCollector(label=label, duration=10)
             assert collector.label == label
 
@@ -78,14 +78,34 @@ class TestCsiCollectorOperations:
             assert len(json_files) >= 1
 
             loaded = np.load(npy_files[0])
-            assert loaded.shape == (50, 52)
+            assert loaded.shape == (1, 50, 52) # Now expects 3D output
+
+    def test_collector_output_loads_in_dataset(self):
+        import numpy as np
+        from classifier.dataset import Esp32Dataset
+
+        with tempfile.TemporaryDirectory() as tmp:
+            collector = CsiCollector(
+                label="walking",
+                duration=5,
+                output_dir=tmp,
+            )
+            window = np.ones((50, 52), dtype=np.float32)
+            collector._save_window(node_id=1, window=window)
+
+            # verify that Esp32Dataset can load this file
+            ds = Esp32Dataset(str(tmp))
+            assert len(ds) == 1
+            x, y = ds[0]
+            assert x.shape == (50, 52)
+            assert y.item() == 0  # walking label index
 
     def test_metadata_json_contains_required_fields(self):
         import numpy as np
 
         with tempfile.TemporaryDirectory() as tmp:
             collector = CsiCollector(
-                label="bending",
+                label="falling",
                 duration=10,
                 output_dir=tmp,
             )
@@ -98,7 +118,7 @@ class TestCsiCollectorOperations:
             with open(json_files[0]) as f:
                 meta = json.load(f)
 
-            assert meta["label"] == "bending"
+            assert meta["label"] == "falling"
             assert meta["node_id"] == 2
             assert meta["subcarrier_count"] == 52
             assert meta["sample_count"] == 50

@@ -155,7 +155,7 @@ def main(argv: list[str] | None = None) -> None:
     logger.info(
         "Loaded model (input=%d, output=%d) from %s",
         getattr(model, "input_dim", 52),
-        getattr(model, "output_dim", 4),
+        getattr(model, "output_dim", 6),
         args.model,
     )
 

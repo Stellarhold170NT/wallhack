@@ -18,7 +18,7 @@ from classifier.dataset import save_scaler, load_scaler
 rng = np.random.default_rng(42)
 
 
-def _make_checkpoint_and_scaler(tmpdir: str, output_dim: int = 4):
+def _make_checkpoint_and_scaler(tmpdir: str, output_dim: int = 6):
     """Create a model checkpoint (with custom output_dim) and fitted scaler."""
     model = AttentionGRU(input_dim=52, hidden_dim=128, attention_dim=32, output_dim=output_dim)
     model.eval()
@@ -73,7 +73,7 @@ class TestEndToEndPipeline:
             assert not activity_queue.empty()
             result = activity_queue.get_nowait()
             assert result["node_id"] == 1
-            assert result["label"] in ("walking", "running", "lying", "bending", "unknown")
+            assert result["label"] in ("walking", "running", "lying", "falling", "sitting", "standing", "unknown")
             assert 0.0 <= result["confidence"] <= 1.0
             assert "class_probs" in result
 
@@ -208,7 +208,7 @@ class TestRealCheckpoint:
     def test_train_save_load_infer_roundtrip(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             model = AttentionGRU(
-                input_dim=52, hidden_dim=128, attention_dim=32, output_dim=4,
+                input_dim=52, hidden_dim=128, attention_dim=32, output_dim=6,
             )
             scaler = StandardScaler()
             dummy_data = rng.normal(size=(100, 50 * 52))
@@ -237,7 +237,7 @@ class TestRealCheckpoint:
             tensor = torch.randn(1, 50, 52)
             with torch.no_grad():
                 logits = classifier._model(tensor)
-            assert logits.shape == (1, 4)
+            assert logits.shape == (1, 6)
 
     def test_activity_label_serializable(self):
         al = ActivityLabel(
@@ -245,7 +245,7 @@ class TestRealCheckpoint:
             node_id=1,
             label="walking",
             confidence=0.87,
-            class_probs={"walking": 0.87, "running": 0.08, "lying": 0.03, "bending": 0.02},
+            class_probs={"walking": 0.87, "running": 0.08, "lying": 0.03, "falling": 0.02},
         )
         d = al.to_dict()
         json_str = json.dumps(d)

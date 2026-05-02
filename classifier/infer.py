@@ -23,8 +23,12 @@ import torch.nn.functional as F
 logger = logging.getLogger("classifier.infer")
 
 LABEL_MAP = {
-    0: "walking", 1: "running", 2: "lying", 3: "bending",
-    4: "falling", 5: "sitting", 6: "standing",
+    0: "walking",
+    1: "running",
+    2: "lying",
+    3: "falling",
+    4: "sitting",
+    5: "standing",
 }
 TARGET_SUBCARRIERS = 52
 WINDOW_SIZE = 50
@@ -175,7 +179,7 @@ class CsiClassifier:
         logger.info(
             "Loaded model (input=%d, output=%d) from %s",
             getattr(self._model, "input_dim", 52),
-            getattr(self._model, "output_dim", 4),
+            getattr(self._model, "output_dim", 6),
             model_path,
         )
 
@@ -286,11 +290,14 @@ class CsiClassifier:
             },
         )
 
-        logger.debug(
-            "Node %d: %s (%.3f) in %.2f ms",
+        logger.info(
+            "Node %d Activity: %s (confidence=%.2f)",
             node_id,
-            label,
+            label.upper(),
             confidence,
+        )
+        logger.debug(
+            "Inference latency: %.2f ms",
             elapsed_ms,
         )
         if elapsed_ms > 10.0:

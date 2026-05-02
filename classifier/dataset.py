@@ -6,16 +6,7 @@ import torch
 from sklearn.preprocessing import StandardScaler
 
 
-LABEL_MAP_ESP32 = {"walking": 0, "running": 1, "lying": 2, "bending": 3, "falling": 4, "sitting": 5, "standing": 6}
-
-HAR_LABEL_MAP = {
-    1: 0,  # walk
-    2: 1,  # stand
-    3: 2,  # sit
-    4: 3,  # lie
-    5: 4,  # run
-    6: 5,  # clean
-}
+LABEL_MAP_ESP32 = {"walking": 0, "running": 1, "lying": 2, "falling": 3, "sitting": 4, "standing": 5}
 
 TARGET_SUBCARRIERS = 52
 TARGET_TIMESTEPS = 50
@@ -47,7 +38,7 @@ class Esp32Dataset(torch.utils.data.Dataset):
             label_dir = self.root_dir / label_name
             if not label_dir.is_dir():
                 continue
-            for npy_path in sorted(label_dir.glob("*.npy")):
+            for npy_path in sorted(label_dir.rglob("*.npy")):
                 data = np.load(npy_path)
                 if data.ndim != 3:
                     continue
@@ -97,15 +88,18 @@ class HarDataset(torch.utils.data.Dataset):
         self.scaler = scaler
 
         self.label_map = {
-            "Empty": 0,
-            "Lying": 1,
-            "Sitting": 2,
-            "sit": 2,
-            "Standing": 3,
-            "stand": 3,
-            "Walking": 4,
-            "walk": 4,
-            "fall": 5,
+            "walking": 0,
+            "walk": 0,
+            "running": 1,
+            "run": 1,
+            "lying": 2,
+            "lie": 2,
+            "falling": 3,
+            "fall": 3,
+            "sitting": 4,
+            "sit": 4,
+            "standing": 5,
+            "stand": 5,
         }
 
         self.samples: list[np.ndarray] = []
@@ -131,7 +125,7 @@ class HarDataset(torch.utils.data.Dataset):
     def _load_csv_files(self) -> None:
         for csv_path in sorted(self.root_dir.rglob("*.csv")):
             name = csv_path.stem
-            activity = name.split("_")[0]
+            activity = name.split("_")[0].lower()
             if activity not in self.label_map:
                 continue
 
@@ -155,7 +149,7 @@ class HarDataset(torch.utils.data.Dataset):
 
         pcap_files = sorted(self.root_dir.rglob("*.pcap"))
         for pcap_path in pcap_files:
-            activity = pcap_path.parent.name
+            activity = pcap_path.parent.name.lower()
             if activity not in self.label_map:
                 continue
 

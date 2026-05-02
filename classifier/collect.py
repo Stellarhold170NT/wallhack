@@ -28,16 +28,32 @@ from aggregator.parser import parse_frame
 
 logger = logging.getLogger(__name__)
 
-VALID_LABELS = {"walking", "running", "lying", "bending", "falling", "sitting", "standing"}
+VALID_LABELS = {"walking", "running", "lying", "falling", "sitting", "standing"}
 WINDOW_SIZE = 50
 WINDOW_STEP = 25
+TARGET_SUBCARRIERS = 52
+
+
+def _center_crop_1d(arr: np.ndarray, target: int, axis: int) -> np.ndarray:
+    """Center-crop or pad a 1-D array to target length."""
+    n = arr.shape[axis]
+    if n <= target:
+        pad_before = (target - n) // 2
+        pad_after = target - n - pad_before
+        pad_width = [(0, 0)] * arr.ndim
+        pad_width[axis] = (pad_before, pad_after)
+        return np.pad(arr, pad_width, mode="constant")
+    start = (n - target) // 2
+    slc = [slice(None)] * arr.ndim
+    slc[axis] = slice(start, start + target)
+    return arr[tuple(slc)]
 
 
 class CsiCollector:
     """Records CSI amplitude windows from UDP streams for a labeled activity.
 
     Args:
-        label: Activity label (walking, running, lying, bending, falling, sitting, standing).
+        label: Activity label (walking, running, lying, falling, sitting, standing).
         duration: Recording duration in seconds.
         output_dir: Root directory for saved .npy + .json files.
         port: UDP port to bind (default 5005).
@@ -78,7 +94,7 @@ class CsiCollector:
         base = self.output_dir / f"{timestamp}_{node_id}"
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
-        np.save(base.with_suffix(".npy"), window.astype(np.float32))
+        np.save(base.with_suffix(".npy"), window[np.newaxis].astype(np.float32))
 
         metadata = {
             "label": self.label,
@@ -108,11 +124,13 @@ class CsiCollector:
 
         node_id = frame.node_id
         amplitudes = np.array(frame.amplitudes, dtype=np.float32)
+        # Normalize to target subcarriers (D-37)
+        processed = _center_crop_1d(amplitudes, TARGET_SUBCARRIERS, axis=0)
 
         if node_id not in self._buffers:
             self._buffers[node_id] = deque()
 
-        self._buffers[node_id].append(amplitudes)
+        self._buffers[node_id].append(processed)
         self._total_frames += 1
 
         buf = self._buffers[node_id]
@@ -182,7 +200,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     parser.add_argument(
         "--label", required=True,
-        help="Activity label (walking, running, lying, bending, falling, sitting, standing)",
+        help="Activity label (walking, running, lying, falling, sitting, standing)",
     )
     parser.add_argument(
         "--duration", type=float, default=30.0,
