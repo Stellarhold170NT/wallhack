@@ -79,7 +79,10 @@ python -m processor --input data/raw/node_1_record.npy
 ```powershell
 $env:PYTHONPATH="."; pytest tests/
 ```
-
+### Phase 6
+```powershell
+python -m aggregator --port 5005 --dashboard --dashboard-port 8024 --log-level INFO --classifier-config "{\"model_path\":\"models/activity/model.pth\",\"scaler_path\":\"models/activity/activity_scaler.json\",\"confidence_threshold\":0.6}"
+```
 
 <img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/c679775e-9734-4f29-8380-bbe0b7cd1768" />
 
