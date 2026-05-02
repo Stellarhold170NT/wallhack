@@ -30,6 +30,7 @@ class NodeState:
     loss_count: int = 0
     last_sequence: int | None = None
     stale: bool = False
+    fps: int = 0
 
 
 class CsiUdpServer(asyncio.DatagramProtocol):
@@ -142,6 +143,7 @@ class CsiUdpServer(asyncio.DatagramProtocol):
             for node_id, node in list(self.nodes.items()):
                 prev = self._prev_frame_counts.get(node_id, 0)
                 fps = node.frame_count - prev
+                node.fps = fps
                 self._prev_frame_counts[node_id] = node.frame_count
 
                 hist = self._history.get(node_id)

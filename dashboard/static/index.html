@@ -343,18 +343,21 @@ function updateAlerts(alerts) {
 
 function updateHealth(health) {
   const container = document.getElementById('health');
+  if (!health || Object.keys(health).length === 0) return;
+  
   container.innerHTML = `<table class="health-table">
     <tr><th>NODE</th><th>FPS</th><th>LINK</th></tr>
     ${Object.entries(health).map(([nid, info]) => `
-      <tr><td><b>${nid}</b></td><td>${Math.round(info.fps)}</td><td style="color:${info.stale ? '#ef4444' : '#059669'}">${info.stale ? 'LOST' : 'OK'}</td></tr>
+      <tr>
+        <td><b>${nid}</b></td>
+        <td>${info.fps !== undefined ? Math.round(info.fps) : '--'}</td>
+        <td style="color:${info.stale ? '#ef4444' : '#10b981'}">${info.stale ? 'LOST' : 'OK'}</td>
+      </tr>
     `).join('')}
   </table>`;
 }
 
 document.addEventListener('DOMContentLoaded', connect);
-</script>
-</body>
-</html>
 </script>
 </body>
 </html>
