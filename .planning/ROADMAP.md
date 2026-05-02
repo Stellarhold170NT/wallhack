@@ -217,6 +217,13 @@ Plans:
 
 **Depends on:** Phase 4, Phase 5
 
+**Plans:** 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — FastAPI backend with WebSocket, REST endpoints, and DashboardState queue consumer
+- [ ] 06-02-PLAN.md — Vanilla JS + Canvas 2D frontend with 5-panel grid layout
+- [ ] 06-03-PLAN.md — Aggregator CLI wiring (--dashboard flag) and integration tests
+
 ---
 
 ## Dependency Graph
