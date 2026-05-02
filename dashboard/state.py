@@ -35,6 +35,8 @@ class DashboardState:
         self._activity: dict[int, dict] = {}
         self._alerts: deque[dict] = deque(maxlen=50)
         self._heatmap: dict[int, deque] = {}
+        self._rssi: dict[int, int] = {}
+        self._rssi_history: dict[int, deque[int]] = {}
         self._shutdown = asyncio.Event()
 
         self._tasks: list[asyncio.Task] = []
@@ -90,10 +92,20 @@ class DashboardState:
             amps = getattr(frame, "amplitudes", None)
             if amps is None and isinstance(frame, dict):
                 amps = frame.get("amplitudes")
+            
+            rssi = getattr(frame, "rssi", None)
+            if rssi is None and isinstance(frame, dict):
+                rssi = frame.get("rssi")
+
             if node_id is not None and amps is not None:
                 if node_id not in self._heatmap:
                     self._heatmap[node_id] = deque(maxlen=200)
                 self._heatmap[node_id].append(np.asarray(amps, dtype=np.float32))
+                if rssi is not None:
+                    self._rssi[node_id] = rssi
+                    if node_id not in self._rssi_history:
+                        self._rssi_history[node_id] = deque(maxlen=1200)
+                    self._rssi_history[node_id].append(rssi)
 
     def get_status(self) -> dict:
         return {
@@ -105,11 +117,17 @@ class DashboardState:
     def get_alerts(self, count: int = 50) -> list[dict]:
         return list(self._alerts)[:count]
 
-    def get_heatmap(self) -> dict[int, list[list[float]]]:
-        return {
-            nid: [arr.tolist() for arr in self._heatmap[nid]]
-            for nid in self._heatmap
-        }
+    def get_heatmap(self) -> dict:
+        result = {}
+        for nid in self._heatmap:
+            history = self._rssi_history.get(nid, [])
+            avg_rssi = sum(history) / len(history) if len(history) > 0 else 0
+            result[nid] = {
+                "frames": [arr.tolist() for arr in self._heatmap[nid]],
+                "rssi": self._rssi.get(nid, 0),
+                "rssi_avg": round(avg_rssi, 1)
+            }
+        return result
 
     def _get_node_health(self) -> dict:
         if self._node_source is None:

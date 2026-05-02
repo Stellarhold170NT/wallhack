@@ -273,13 +273,17 @@ function updateHeatmaps(heatmapData) {
     }
 
     const canvas = state.canvases[nid];
-    const frames = heatmapData[nid];
+    const nodeData = heatmapData[nid];
+    const frames = nodeData.frames;
+    const rssi = nodeData.rssi;
+
     if (frames.length > 0) {
       const lastFrame = frames[frames.length - 1];
       const avgAmp = lastFrame.reduce((a, b) => a + b, 0) / lastFrame.length;
       const variance = lastFrame.reduce((a, b) => a + Math.abs(b - avgAmp), 0) / lastFrame.length;
       const stability = Math.max(0, 100 - (variance * 5));
-      document.getElementById(`stats-${nid}`).textContent = `RSSI: -45dBm | AMP: ${avgAmp.toFixed(1)}dB | STB: ${Math.round(stability)}%`;
+      const rssi_avg = nodeData.rssi_avg || 0;
+      document.getElementById(`stats-${nid}`).textContent = `RSSI: ${nodeData.rssi}dBm (AVG: ${rssi_avg}) | AMP: ${avgAmp.toFixed(1)}dB | STB: ${Math.round(stability)}%`;
     }
 
     const ctx = canvas.getContext('2d');
@@ -294,7 +298,8 @@ function updateHeatmaps(heatmapData) {
     frames.forEach((frame, x) => {
       frame.forEach((val, y) => {
         if (y >= rows) return;
-        ctx.fillStyle = getJetColor(val / 30);
+        const norm = (val - 0) / (30 - 0);
+        ctx.fillStyle = getJetColor(norm);
         ctx.fillRect(x * cellW, y * cellH, cellW + 1, cellH + 1);
       });
     });
