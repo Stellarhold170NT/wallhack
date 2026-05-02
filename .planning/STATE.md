@@ -2,8 +2,8 @@
 
 **Project:** ESP32-S3 CSI Wallhack
 **Milestone:** v1.0 — Basic Sensing Pipeline
-**Current Phase:** Phase 5 Complete — Ready for Phase 6
-**Last Updated:** 2026-05-01 (post-execution)
+**Current Phase:** Phase 6 Context Gathered — Ready for Planning
+**Last Updated:** 2026-05-02 (post-context-gathering)
 
 ## Project Reference
 
@@ -21,7 +21,7 @@ See: `.planning/PROJECT.md` (updated 2026-04-30)
 | 3: Signal Processing | ✓ Complete | SIG-03..SIG-06 | 4/4 |
 | 4: Presence & Intrusion | ✓ Complete | SEC-01..SEC-04 | 4/4 |
 | 5: Activity Recognition | ✓ Complete | ACT-01..ACT-05 | 5/5 |
-| 6: Dashboard & API | 🔴 Not started | UI-01..UI-05, API-01..API-02 | 0/7 |
+| 6: Dashboard & API | 🟡 Context gathered | UI-01..UI-05, API-01..API-02 | 0/7 |
 
 ## Blockers
 
@@ -194,5 +194,17 @@ None at project start.
 - Server now pushes frames directly to queue without intermediate buffer
 - Tests: 90/90 passed after fix
 
+**2026-05-02 — Phase 6 Context Gathered**
+- Decisions captured:
+  - D-44: FastAPI embedded in aggregator, port 8024, `--dashboard` flag activation
+  - D-45: Vanilla JS + Canvas 2D frontend, zero dependencies
+  - D-46: WebSocket fixed 2Hz interval push, JSON bundle with all panels
+  - D-47: Single-page 5-panel grid (heatmap, presence, activity, alerts, node health)
+  - D-48: Heatmap axes: subcarrier (Y) vs time (X), blue→red color scale
+  - D-50: REST endpoints GET /status and GET /alerts alongside WebSocket
+- Artifact: `.planning/phases/06-dashboard-api/06-CONTEXT.md`
+- Artifact: `.planning/phases/06-dashboard-api/06-DISCUSSION-LOG.md`
+- Ready for Phase 6 planning
+
 ---
-*Last updated: 2026-05-01 after Phase 5 execution + NodeBuffer bugfix*
+*Last updated: 2026-05-02 after Phase 6 context gathering*
