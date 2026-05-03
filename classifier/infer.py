@@ -24,11 +24,8 @@ logger = logging.getLogger("classifier.infer")
 
 LABEL_MAP = {
     0: "walking",
-    1: "running",
-    2: "lying",
-    3: "falling",
-    4: "sitting",
-    5: "standing",
+    1: "sitting",
+    2: "standing",
 }
 TARGET_SUBCARRIERS = 52
 WINDOW_SIZE = 50
@@ -263,8 +260,13 @@ class CsiClassifier:
         normalized = self._scaler.transform(flat)
         window_norm = normalized.reshape(orig_shape).astype(np.float32)
 
+        # Temporal difference: highlight motion patterns (Matching dataset.py logic)
+        window_diff = np.diff(window_norm, axis=0)  # (49, 52)
+        # Pad first row with zeros to maintain 50 timesteps
+        window_final = np.vstack([np.zeros((1, window_norm.shape[1]), dtype=window_norm.dtype), window_diff])
+        
         # Inference
-        tensor = torch.from_numpy(window_norm).unsqueeze(0)  # (1, T, C)
+        tensor = torch.from_numpy(window_final).unsqueeze(0)  # (1, T, C)
         t_start = time.perf_counter()
         with torch.no_grad():
             logits = self._model(tensor)

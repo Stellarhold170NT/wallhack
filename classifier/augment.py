@@ -47,8 +47,8 @@ def shift_augment(
 def noise_augment(
     X: np.ndarray,
     y: np.ndarray,
-    num_copies: int = 3,
-    noise_std: float = 1.0,
+    num_copies: int = 4,
+    noise_std: float = 0.2,
     rng: np.random.Generator | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Multiplicative Gaussian noise: num_copies + original = (num_copies+1)×.

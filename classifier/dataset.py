@@ -6,7 +6,7 @@ import torch
 from sklearn.preprocessing import StandardScaler
 
 
-LABEL_MAP_ESP32 = {"walking": 0, "running": 1, "lying": 2, "falling": 3, "sitting": 4, "standing": 5}
+LABEL_MAP_ESP32 = {"walking": 0, "sitting": 1, "standing": 2}
 
 TARGET_SUBCARRIERS = 52
 TARGET_TIMESTEPS = 50
@@ -63,6 +63,10 @@ class Esp32Dataset(torch.utils.data.Dataset):
             x_2d = x.reshape(1, -1)
             x_2d = self.scaler.transform(x_2d)
             x = x_2d.reshape(orig_shape)
+
+        # Temporal difference: highlight motion patterns
+        x_diff = np.diff(x, axis=0)  # (49, 52)
+        x = np.vstack([np.zeros((1, x.shape[1]), dtype=x.dtype), x_diff])  # (50, 52)
 
         x = torch.from_numpy(x)
         label = torch.tensor(label, dtype=torch.long)
